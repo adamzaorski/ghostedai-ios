@@ -25,7 +25,9 @@ struct GhostedAIApp: App {
 
     var body: some Scene {
         WindowGroup {
+            // Uncomment the view you want to test:
             ContentView()
+            // DesignSystemPreviewView()
         }
         .modelContainer(sharedModelContainer)
     }

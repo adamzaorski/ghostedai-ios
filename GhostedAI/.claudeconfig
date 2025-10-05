@@ -1,0 +1,602 @@
+# GhostedAI iOS App - Claude Code Configuration
+# Project: Anti-therapist AI companion for breakup recovery
+# Platform: iOS 15+ | Swift | SwiftUI
+# Last Updated: 2025-10-05
+
+project:
+  name: "GhostedAI"
+  type: "iOS App"
+  platform: "iOS 15+"
+  language: "Swift"
+  framework: "SwiftUI"
+  bundle_id: "app.ghostedai.ios"
+  
+overview: |
+  GhostedAI is an AI-powered breakup recovery app that provides users with an "anti-therapist" 
+  companion. Users complete a 20-question onboarding to build their profile, then interact with 
+  an AI that adapts to 5 different personality styles. The app includes chat functionality, 
+  no-contact streak tracking, daily motivational quotes, and gamification elements.
+  
+  Monetization: Hard paywall after onboarding (subscription via Adapty)
+  Target Audience: Adults (17+) going through romantic breakups
+
+architecture:
+  pattern: "MVVM (Model-View-ViewModel)"
+  structure: |
+    - Features are self-contained modules (Onboarding, Chat, Dashboard, Profile)
+    - Each feature has its own Views, ViewModels, and Models
+    - Shared services injected via DependencyInjection container
+    - SwiftUI for all UI, no UIKit
+    - Async/await for all asynchronous operations
+    - Combine for reactive state management in ViewModels
+  
+  key_principles:
+    - Single Responsibility: Each file has one clear purpose
+    - Dependency Injection: Services passed to ViewModels, never created internally
+    - Separation of Concerns: UI logic in Views, business logic in ViewModels, data logic in Services
+    - Testability: All ViewModels and Services are testable with mock dependencies
+
+project_structure: |
+  GhostedAI/
+  ├── App/
+  │   ├── GhostedAIApp.swift          # App entry point
+  │   └── AppDelegate.swift            # App lifecycle
+  ├── Core/
+  │   ├── Configuration/
+  │   │   └── Environment.swift        # API keys, environment config
+  │   ├── DependencyInjection/
+  │   │   └── ServiceContainer.swift   # Service initialization
+  │   ├── Navigation/
+  │   │   └── NavigationManager.swift  # App-wide navigation
+  │   ├── Errors/
+  │   │   └── ErrorHandler.swift       # Centralized error handling
+  │   ├── Extensions/
+  │   │   ├── View+Extensions.swift
+  │   │   ├── String+Extensions.swift
+  │   │   └── Date+Extensions.swift
+  │   └── ViewModels/
+  │       └── BaseViewModel.swift      # Base class for all ViewModels
+  ├── Features/
+  │   ├── Onboarding/
+  │   │   ├── Views/
+  │   │   │   ├── WelcomeView.swift
+  │   │   │   ├── SignUpView.swift
+  │   │   │   ├── SignInView.swift
+  │   │   │   ├── OnboardingContainerView.swift
+  │   │   │   └── QuestionView.swift
+  │   │   ├── ViewModels/
+  │   │   │   ├── AuthenticationViewModel.swift
+  │   │   │   └── OnboardingViewModel.swift
+  │   │   └── Models/
+  │   │       └── OnboardingQuestion.swift
+  │   ├── Paywall/
+  │   │   ├── Views/
+  │   │   │   └── PaywallView.swift
+  │   │   └── ViewModels/
+  │   │       └── PaywallViewModel.swift
+  │   ├── Chat/
+  │   │   ├── Views/
+  │   │   │   ├── ChatView.swift
+  │   │   │   ├── PersonalityPickerView.swift
+  │   │   │   └── MessageBubbleView.swift
+  │   │   └── ViewModels/
+  │   │       └── ChatViewModel.swift
+  │   ├── Dashboard/
+  │   │   ├── Views/
+  │   │   │   ├── DashboardView.swift
+  │   │   │   ├── StreakDetailView.swift
+  │   │   │   ├── StreakCard.swift
+  │   │   │   └── QuoteCardView.swift
+  │   │   └── ViewModels/
+  │   │       ├── DashboardViewModel.swift
+  │   │       └── StreakViewModel.swift
+  │   ├── Profile/
+  │   │   ├── Views/
+  │   │   │   ├── ProfileView.swift
+  │   │   │   └── EditProfileView.swift
+  │   │   └── ViewModels/
+  │   │       └── ProfileViewModel.swift
+  │   └── Settings/
+  │       ├── Views/
+  │       │   ├── SettingsView.swift
+  │       │   ├── SubscriptionView.swift
+  │       │   └── DeleteAccountView.swift
+  │       └── ViewModels/
+  │           └── SettingsViewModel.swift
+  ├── Services/
+  │   ├── Supabase/
+  │   │   └── SupabaseService.swift    # Auth, database operations
+  │   ├── OpenAI/
+  │   │   ├── OpenAIService.swift      # Chat completions, streaming
+  │   │   └── QuoteGenerator.swift     # AI quote generation
+  │   ├── Adapty/
+  │   │   └── AdaptyService.swift      # Subscription management
+  │   ├── Notifications/
+  │   │   ├── NotificationService.swift
+  │   │   └── StreakNotificationService.swift
+  │   └── Streak/
+  │       └── StreakService.swift      # Streak calculation logic
+  ├── Models/
+  │   ├── User.swift                   # User profile model
+  │   ├── Message.swift                # Chat message model
+  │   ├── Streak.swift                 # Streak data model
+  │   ├── Quote.swift                  # Quote model
+  │   └── AIPersonality.swift          # AI personality enum
+  ├── DesignSystem/
+  │   ├── Colors.swift                 # Color palette
+  │   ├── Typography.swift             # Font styles
+  │   ├── Spacing.swift                # Spacing constants
+  │   ├── GlassEffects.swift           # Glassmorphic effects
+  │   ├── Animations.swift             # Animation standards
+  │   └── Icons.swift                  # SF Symbol references
+  ├── Components/
+  │   ├── Buttons/
+  │   │   ├── PrimaryButton.swift
+  │   │   ├── SecondaryButton.swift
+  │   │   └── IconButton.swift
+  │   ├── Cards/
+  │   │   ├── GlassCard.swift
+  │   │   ├── ChatBubbleCard.swift
+  │   │   └── QuoteCard.swift
+  │   ├── Inputs/
+  │   │   ├── GlassTextField.swift
+  │   │   └── GlassTextEditor.swift
+  │   └── Layout/
+  │       ├── ScreenContainer.swift
+  │       └── LoadingView.swift
+  └── Resources/
+      ├── Assets.xcassets
+      └── Info.plist
+
+coding_standards:
+  swift_version: "5.9+"
+  ios_deployment_target: "15.0"
+  
+  naming_conventions:
+    - "Use descriptive, self-documenting names"
+    - "Views: Noun + 'View' (e.g., ChatView, DashboardView)"
+    - "ViewModels: Noun + 'ViewModel' (e.g., ChatViewModel)"
+    - "Services: Noun + 'Service' (e.g., SupabaseService)"
+    - "Models: Singular noun (e.g., User, Message, not Users, Messages)"
+    - "Functions: verbNoun (e.g., sendMessage, fetchUser, logStreak)"
+    - "Bool properties: is/has/should prefix (e.g., isLoading, hasSubscription)"
+    - "Constants: camelCase for local, PascalCase for static (e.g., maxMessageLength)"
+  
+  code_style:
+    - "Use explicit types for clarity in complex scenarios"
+    - "Prefer async/await over completion handlers"
+    - "Use guard for early returns and input validation"
+    - "Use computed properties for derived state"
+    - "Keep functions under 30 lines when possible"
+    - "Extract complex logic into separate methods"
+    - "Use extensions to organize code by functionality"
+    - "Add // MARK: - Section Name for code organization"
+  
+  swiftui_guidelines:
+    - "Extract complex views into separate components"
+    - "Use @State for view-local state only"
+    - "Use @StateObject for owned ViewModels"
+    - "Use @ObservedObject for passed ViewModels"
+    - "Use @EnvironmentObject sparingly, prefer injection"
+    - "Prefer custom ViewModifiers for reusable styling"
+    - "Use PreferenceKey for child-to-parent communication"
+    - "Always provide preview providers for views"
+  
+  error_handling:
+    - "Use Result type for operations that can fail"
+    - "Create custom error types conforming to Error protocol"
+    - "Handle errors at appropriate levels (don't let them bubble unnecessarily)"
+    - "Show user-friendly error messages, never technical details"
+    - "Log errors for debugging, but strip sensitive information"
+  
+  async_patterns:
+    - "Use async/await for all asynchronous operations"
+    - "Use Task for fire-and-forget operations"
+    - "Use AsyncStream for streaming data (AI responses)"
+    - "Handle cancellation with Task.isCancelled checks"
+    - "Use @MainActor for UI updates"
+
+design_system:
+  philosophy: "Modern glassmorphism with iOS native feel"
+  
+  colors:
+    approach: "Define semantic colors, support dark/light modes"
+    examples:
+      - "AppColors.primary: Brand accent color"
+      - "AppColors.background: Main background"
+      - "AppColors.surface: Card/surface backgrounds"
+      - "AppColors.textPrimary: Main text"
+      - "AppColors.textSecondary: Secondary text"
+      - "AppColors.success: Positive actions (streak)"
+      - "AppColors.error: Errors and destructive actions"
+  
+  typography:
+    system_font: "SF Pro (system default)"
+    scale:
+      - "LargeTitle: 34pt, Bold"
+      - "Title1: 28pt, Bold"
+      - "Title2: 22pt, Bold"
+      - "Title3: 20pt, Semibold"
+      - "Headline: 17pt, Semibold"
+      - "Body: 17pt, Regular"
+      - "Callout: 16pt, Regular"
+      - "Subheadline: 15pt, Regular"
+      - "Footnote: 13pt, Regular"
+      - "Caption: 12pt, Regular"
+  
+  spacing:
+    grid: "8pt base grid"
+    scale:
+      - "xs: 4pt (tight spacing)"
+      - "s: 8pt (standard spacing)"
+      - "m: 16pt (medium spacing)"
+      - "l: 24pt (large spacing)"
+      - "xl: 32pt (extra large spacing)"
+      - "xxl: 48pt (section spacing)"
+  
+  glassmorphism:
+    implementation: |
+      Use iOS Materials for glass effects:
+      - .ultraThinMaterial: Very subtle blur
+      - .thinMaterial: Light blur
+      - .regularMaterial: Standard blur
+      - .thickMaterial: Heavy blur
+      
+      Enhance with:
+      - Subtle white borders (10-20% opacity)
+      - Soft shadows for depth
+      - Slight color overlays for tinting
+      - Smooth corner radius (12-20pt typically)
+  
+  animations:
+    durations:
+      - "quick: 0.2s (micro-interactions)"
+      - "standard: 0.3s (most transitions)"
+      - "slow: 0.5s (emphasis)"
+    easing: ".easeInOut or .spring(response: 0.3, dampingFraction: 0.7)"
+
+integrations:
+  supabase:
+    purpose: "Backend, database, authentication"
+    implementation:
+      - "Use supabase-swift package"
+      - "Initialize once in ServiceContainer"
+      - "Store client as singleton"
+      - "All database operations through SupabaseService"
+    security:
+      - "Enable Row Level Security (RLS) on all tables"
+      - "Users can only access their own data"
+      - "API keys stored in Environment.swift (not committed)"
+    tables:
+      - "users: Extended user profile data"
+      - "messages: Chat history"
+      - "streaks: Current streak data"
+      - "daily_logs: Daily no-contact logs"
+      - "quotes: Generated quotes"
+  
+  openai:
+    purpose: "AI chat and quote generation"
+    implementation:
+      - "Use MacPaw/OpenAI Swift package"
+      - "All calls through OpenAIService"
+      - "Implement streaming for chat responses"
+      - "Pass last 10-15 messages as context"
+    personalities:
+      - "Savage Reality Check: Direct, brutally honest, no sugar-coating"
+      - "Sarcastic Soft Hype Friend: Witty, supportive, uses humor"
+      - "Gym Bro/Gal: Motivational, fitness analogies, energetic"
+      - "Poetic Moody Soul: Artistic, metaphorical, introspective"
+      - "Random: Switches between styles per message"
+    cost_management:
+      - "Use GPT-4 for chat (better quality)"
+      - "Use GPT-3.5-turbo for quotes (cheaper, sufficient)"
+      - "Limit context window to last 15 messages"
+      - "Cache quotes for 24 hours"
+  
+  adapty:
+    purpose: "Subscription management with A/B testing"
+    implementation:
+      - "Use AdaptySDK-iOS package"
+      - "Initialize in AppDelegate/SceneDelegate"
+      - "All subscription operations through AdaptyService"
+      - "Fetch paywalls dynamically from Adapty dashboard"
+    features:
+      - "A/B test paywall designs without app updates"
+      - "Track conversion metrics"
+      - "Handle purchase flows"
+      - "Restore purchases"
+      - "Subscription status validation"
+  
+  notifications:
+    purpose: "Daily reminder to log no-contact streak"
+    implementation:
+      - "Use UserNotifications framework"
+      - "Local notifications only (no push)"
+      - "Schedule daily at 8pm local time"
+      - "Cancel if user already logged"
+    content:
+      - "Title: 'Daily Check-In'"
+      - "Body: Motivational message about logging streak"
+      - "Badge: Optional unlogged day counter"
+
+ai_system:
+  personalities:
+    savage_reality_check:
+      description: "Direct, brutally honest, no sugar-coating"
+      tone: "Tough love, calls out excuses, pushes for growth"
+      system_prompt_template: |
+        You are a brutally honest friend helping someone through a breakup.
+        No sugar-coating. Tell them the hard truths they need to hear.
+        Be direct but not cruel. Push them to face reality and grow.
+        Use short, punchy sentences. No fluff.
+    
+    sarcastic_soft_hype:
+      description: "Witty, supportive, uses humor to lighten mood"
+      tone: "Playful sarcasm mixed with genuine encouragement"
+      system_prompt_template: |
+        You are a witty, sarcastic friend who uses humor to help someone heal.
+        Roast them lovingly, but always follow with genuine support.
+        Use pop culture references, memes, and lighthearted jokes.
+        Make them laugh while building them up.
+    
+    gym_bro_gal:
+      description: "Motivational, fitness analogies, energetic"
+      tone: "High energy, uses fitness/sports metaphors, pump-up style"
+      system_prompt_template: |
+        You are a motivational gym bro/gal helping someone get through a breakup.
+        Use fitness analogies and sports metaphors constantly.
+        Treat heartbreak like a workout - pain means growth.
+        Be energetic, use phrases like "LET'S GO", "NO EXCUSES", "STAY STRONG".
+    
+    poetic_moody_soul:
+      description: "Artistic, metaphorical, introspective"
+      tone: "Deep, philosophical, uses imagery and metaphors"
+      system_prompt_template: |
+        You are a poetic, introspective friend helping someone process a breakup.
+        Use beautiful metaphors, imagery, and philosophical insights.
+        Speak in thoughtful, lyrical language. Be deep but accessible.
+        Help them find meaning and beauty in the pain.
+    
+    random_mode:
+      description: "Switches personality style randomly each response"
+      implementation: "Randomly select one of the above four personalities per message"
+  
+  context_management:
+    user_profile_context: |
+      Include relevant information from user's onboarding answers:
+      - Relationship duration and context
+      - Current emotional state
+      - Specific triggers to avoid
+      - Communication preferences
+      - Goals for healing
+    
+    conversation_context: |
+      Load last 10-15 messages to maintain conversation continuity.
+      Format for OpenAI:
+      [
+        {role: "system", content: "[personality system prompt + user context]"},
+        {role: "user", content: "[previous user message]"},
+        {role: "assistant", content: "[previous AI response]"},
+        ...
+        {role: "user", content: "[current user message]"}
+      ]
+    
+    quote_generation: |
+      Generate personalized daily motivational quotes.
+      Prompt template:
+      "Generate a single motivational quote for someone going through a breakup.
+      Context: [user profile summary]
+      Tone: [personality style]
+      Requirements:
+      - Authentic, not clichéd
+      - Actionable or deeply reflective
+      - 1-3 sentences maximum
+      - No emojis
+      - Not cringe or computer-like"
+
+data_models:
+  user:
+    fields:
+      - "id: UUID"
+      - "email: String"
+      - "name: String"
+      - "createdAt: Date"
+      - "onboardingCompleted: Bool"
+      - "onboardingAnswers: [String: String] (dictionary of question-answer pairs)"
+      - "preferredPersonality: AIPersonality?"
+      - "notificationEnabled: Bool"
+      - "notificationTime: Date"
+      - "hasActiveSubscription: Bool"
+    protocols: "Codable, Identifiable"
+  
+  message:
+    fields:
+      - "id: UUID"
+      - "userId: UUID"
+      - "content: String"
+      - "sender: MessageSender (enum: user, ai)"
+      - "personality: AIPersonality"
+      - "createdAt: Date"
+    protocols: "Codable, Identifiable"
+  
+  streak:
+    fields:
+      - "id: UUID"
+      - "userId: UUID"
+      - "currentStreak: Int"
+      - "longestStreak: Int"
+      - "lastLogDate: Date?"
+      - "totalDaysLogged: Int"
+    methods:
+      - "incrementStreak()"
+      - "breakStreak()"
+      - "hasLoggedToday() -> Bool"
+    protocols: "Codable, Identifiable"
+  
+  quote:
+    fields:
+      - "id: UUID"
+      - "userId: UUID"
+      - "content: String"
+      - "personality: AIPersonality"
+      - "generatedAt: Date"
+      - "isViewed: Bool"
+    protocols: "Codable, Identifiable"
+  
+  ai_personality:
+    type: "enum"
+    cases:
+      - "savageRealityCheck"
+      - "sarcasticSoftHype"
+      - "gymBroGal"
+      - "poeticMoodySoul"
+      - "random"
+    properties:
+      - "displayName: String"
+      - "description: String"
+      - "icon: String (SF Symbol name)"
+      - "systemPrompt: String"
+
+testing:
+  unit_tests:
+    coverage_target: "70%+ for critical paths"
+    focus_areas:
+      - "ViewModel business logic"
+      - "Service layer operations"
+      - "Model validation and calculations"
+      - "Streak calculation logic"
+      - "Date handling and timezone logic"
+  
+  integration_tests:
+    - "Supabase authentication flow"
+    - "OpenAI API calls (mocked)"
+    - "Adapty purchase flow (sandbox)"
+    - "Notification scheduling"
+  
+  ui_tests:
+    critical_flows:
+      - "Sign up → Onboarding → Paywall → Dashboard"
+      - "Chat message send and receive"
+      - "Streak logging"
+  
+  manual_testing:
+    - "Refer to TESTING_CHECKLIST.md"
+    - "Test on multiple device sizes (SE, Pro, Pro Max)"
+    - "Test dark and light modes"
+    - "Test poor network conditions"
+
+security:
+  api_keys:
+    - "Never commit API keys to Git"
+    - "Use .xcconfig files (gitignored)"
+    - "Store in Environment.swift which reads from .xcconfig"
+  
+  data_protection:
+    - "Enable Supabase Row Level Security"
+    - "Users can only access their own data"
+    - "Chat messages are user-specific"
+    - "Use Keychain for sensitive local storage (tokens)"
+  
+  privacy:
+    - "Don't log PII (personally identifiable information)"
+    - "Anonymize analytics data"
+    - "Provide data deletion capability"
+    - "Follow GDPR principles even if not required"
+
+performance:
+  targets:
+    - "App launch: < 2 seconds (cold start)"
+    - "Chat response: Start streaming within 1 second"
+    - "UI: Maintain 60 FPS on all devices"
+    - "Memory: Keep under 100MB typical usage"
+  
+  optimizations:
+    - "Lazy load images and heavy content"
+    - "Cache network responses appropriately"
+    - "Paginate long lists (messages, logs)"
+    - "Debounce search and frequent operations"
+    - "Use lightweight JSON parsing"
+
+accessibility:
+  requirements:
+    - "VoiceOver support on all interactive elements"
+    - "Dynamic Type support (respect user's text size)"
+    - "Color contrast WCAG AA compliance"
+    - "Reduce Motion support (disable animations if needed)"
+    - "Keyboard navigation support"
+
+documentation:
+  inline_comments:
+    - "Use comments for 'why', not 'what'"
+    - "Document complex algorithms"
+    - "Add TODO/FIXME for future work"
+    - "Use /// for public API documentation"
+  
+  markdown_docs:
+    - "README.md: Project overview and setup"
+    - "ARCHITECTURE.md: System design"
+    - "API_INTEGRATION.md: Service integration details"
+    - "DESIGN_SYSTEM.md: UI guidelines"
+    - "TESTING_CHECKLIST.md: Manual testing scenarios"
+    - "CHANGELOG.md: Version history"
+
+git_workflow:
+  branching:
+    - "main: Production-ready code"
+    - "develop: Integration branch"
+    - "feature/*: Feature branches"
+    - "bugfix/*: Bug fix branches"
+    - "release/*: Release preparation"
+  
+  commit_messages:
+    format: "type: Brief description"
+    types:
+      - "feat: New feature"
+      - "fix: Bug fix"
+      - "docs: Documentation"
+      - "style: Formatting, whitespace"
+      - "refactor: Code restructuring"
+      - "test: Adding tests"
+      - "chore: Maintenance"
+    example: "feat: Add chat streaming functionality"
+
+dependencies:
+  package_manager: "Swift Package Manager"
+  packages:
+    - name: "supabase-swift"
+      url: "https://github.com/supabase/supabase-swift"
+      purpose: "Supabase client"
+    
+    - name: "OpenAI"
+      url: "https://github.com/MacPaw/OpenAI"
+      purpose: "OpenAI API client"
+    
+    - name: "AdaptySDK-iOS"
+      url: "https://github.com/adaptyteam/AdaptySDK-iOS"
+      purpose: "Subscription management"
+
+reminders:
+  - "Always handle errors gracefully with user-friendly messages"
+  - "Test on real devices, not just simulator"
+  - "Check dark mode appearance for all new views"
+  - "Add PreviewProvider to all views for quick iteration"
+  - "Keep ViewModels testable (no direct UI dependencies)"
+  - "Use dependency injection for all services"
+  - "Follow the design system strictly for consistency"
+  - "Document complex logic and business rules"
+  - "Consider accessibility in all UI decisions"
+  - "Optimize for performance, but prioritize clarity first"
+  - "Never expose API keys in code or commits"
+  - "Test authentication flows thoroughly"
+  - "Validate all user inputs"
+  - "Handle network failures gracefully"
+  - "Respect user privacy and data"
+
+special_instructions:
+  - "This is a sensitive app dealing with emotional content. Keep AI responses empathetic but authentic, never patronizing."
+  - "The 'anti-therapist' concept means being real and honest, not replacing professional mental health care. Include disclaimers where appropriate."
+  - "Hard paywall is after onboarding - this is critical for business model. Don't allow content access without subscription."
+  - "Glassmorphic design should feel premium and modern, not overdone. Subtle is better."
+  - "Streak tracking is a core engagement feature - make it rewarding and forgiving (encouragement on breaks)."
+  - "Quote generation should feel personal and timely, not generic or robotic."
+  - "User onboarding data is sensitive - handle with appropriate security and privacy measures."

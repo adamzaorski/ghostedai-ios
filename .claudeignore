@@ -1,0 +1,86 @@
+# GhostedAI - Claude Code Ignore File
+# Exclude these files/folders from Claude Code's context
+
+# Xcode Build Artifacts
+DerivedData/
+build/
+*.xcodeproj/xcuserdata/
+*.xcodeproj/project.xcworkspace/xcuserdata/
+*.xcworkspace/xcuserdata/
+
+# Swift Package Manager
+.build/
+.swiftpm/
+Package.resolved
+
+# CocoaPods (if ever used)
+Pods/
+*.xcworkspace
+
+# Carthage (if ever used)
+Carthage/Build/
+
+# Compiled files
+*.o
+*.a
+*.swiftmodule
+*.swiftdoc
+
+# Xcode User Data
+*.xcuserstate
+*.xcuserdatad
+
+# macOS
+.DS_Store
+.AppleDouble
+.LSOverride
+
+# Environment and Secrets
+.env
+.env.*
+*.xcconfig
+Config.plist
+
+# Large Media Files
+*.mp4
+*.mov
+*.avi
+*.png
+*.jpg
+*.jpeg
+*.gif
+*.pdf
+*.sketch
+
+# Documentation (keep source but exclude generated)
+docs/generated/
+
+# Test Coverage Reports
+*.gcda
+*.gcno
+*.profdata
+coverage/
+
+# Logs
+*.log
+logs/
+
+# Temporary Files
+*.tmp
+*.temp
+*~
+
+# Archive Files
+*.zip
+*.tar
+*.gz
+
+# App Store Assets (these are large)
+AppStore/Screenshots/
+AppStore/Previews/
+
+# Keep but don't need in context often
+fastlane/report.xml
+fastlane/Preview.html
+fastlane/screenshots
+fastlane/test_output
