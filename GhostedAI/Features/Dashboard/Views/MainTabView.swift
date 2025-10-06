@@ -1,13 +1,9 @@
 import SwiftUI
 
 /// Main tab navigation container for the app
+/// Tab bar appearance is configured globally in GhostedAIApp.swift
 struct MainTabView: View {
     @State private var selectedTab = 0
-
-    init() {
-        // Configure tab bar appearance BEFORE view loads
-        configureTabBarAppearance()
-    }
 
     var body: some View {
         TabView(selection: $selectedTab) {
@@ -33,58 +29,6 @@ struct MainTabView: View {
                 .tag(2)
         }
         .tint(Color(hex: 0xFF6B35)) // Orange tint for selected tab
-        .toolbarBackground(.black, for: .tabBar)
-        .toolbarBackground(.visible, for: .tabBar)
-    }
-
-    /// Configure unified tab bar appearance across all tabs
-    private func configureTabBarAppearance() {
-        let appearance = UITabBarAppearance()
-        appearance.configureWithOpaqueBackground()
-
-        // UNIFIED: Solid black background for all tabs
-        appearance.backgroundColor = UIColor(hex: 0x000000)
-
-        // UNIFIED: Subtle top border (1pt, white with 0.05 opacity)
-        appearance.shadowColor = UIColor.white.withAlphaComponent(0.05)
-        appearance.shadowImage = nil // Use default shadow line
-
-        // Remove blur/transparency effects
-        appearance.backgroundEffect = nil
-
-        // STANDARD SIZING: Icon size 25x25pt (Apple HIG compliant)
-        // Note: iOS automatically sizes icons to 25x25pt when using SF Symbols
-
-        // INACTIVE TAB STATE: Gray icons and labels
-        let inactiveColor = UIColor(hex: 0x666666)
-        appearance.stackedLayoutAppearance.normal.iconColor = inactiveColor
-        appearance.stackedLayoutAppearance.normal.titleTextAttributes = [
-            .foregroundColor: inactiveColor,
-            .font: UIFont.systemFont(ofSize: 11, weight: .medium) // SF Pro Text
-        ]
-        appearance.stackedLayoutAppearance.normal.badgeBackgroundColor = UIColor(hex: 0xFF6B35)
-
-        // ACTIVE TAB STATE: Orange icons and labels
-        let activeColor = UIColor(hex: 0xFF6B35)
-        appearance.stackedLayoutAppearance.selected.iconColor = activeColor
-        appearance.stackedLayoutAppearance.selected.titleTextAttributes = [
-            .foregroundColor: activeColor,
-            .font: UIFont.systemFont(ofSize: 11, weight: .semibold) // SF Pro Text
-        ]
-        appearance.stackedLayoutAppearance.selected.badgeBackgroundColor = activeColor
-
-        // Apply UNIFIED appearance to all states
-        UITabBar.appearance().standardAppearance = appearance
-        UITabBar.appearance().scrollEdgeAppearance = appearance
-
-        // Ensure tab bar respects safe area for home indicator
-        UITabBar.appearance().isTranslucent = false
-
-        // Remove any extra shadow effects (we only want the top border)
-        UITabBar.appearance().layer.shadowColor = UIColor.clear.cgColor
-        UITabBar.appearance().layer.shadowOffset = .zero
-        UITabBar.appearance().layer.shadowOpacity = 0
-        UITabBar.appearance().layer.shadowRadius = 0
     }
 }
 
