@@ -38,8 +38,8 @@ struct SignInOptionsView: View {
                         .padding(.bottom, 32)
                 }
             }
-            .navigationDestination(isPresented: $navigateToEmailSignIn) {
-                SignInView()
+            .fullScreenCover(isPresented: $navigateToEmailSignIn) {
+                EmailSignInView()
             }
         }
         .presentationCornerRadius(24)
@@ -295,48 +295,6 @@ struct PressableButtonStyle: ButtonStyle {
     }
 }
 
-// MARK: - Placeholder SignInView
-
-/// Placeholder for email/password sign-in view
-struct SignInView: View {
-    @Environment(\.dismiss) private var dismiss
-
-    var body: some View {
-        ZStack {
-            Color.DS.primaryBlack.ignoresSafeArea()
-
-            VStack(spacing: Spacing.l) {
-                Text("Email Sign In")
-                    .typography(.displaySmall)
-                    .foregroundColor(.DS.textPrimary)
-
-                Text("Coming soon - Traditional email/password sign-in")
-                    .typography(.bodyMedium)
-                    .foregroundColor(.DS.textSecondary)
-                    .multilineTextAlignment(.center)
-
-                Button("Go Back") {
-                    dismiss()
-                }
-                .font(.system(size: 17, weight: .semibold))
-                .foregroundColor(.white)
-                .frame(maxWidth: .infinity)
-                .frame(height: 54)
-                .background(
-                    LinearGradient(
-                        colors: [Color(hex: 0xFF6B35), Color(hex: 0xFF8E53)],
-                        startPoint: .leading,
-                        endPoint: .trailing
-                    )
-                )
-                .clipShape(RoundedRectangle(cornerRadius: 14))
-                .padding(.horizontal, 24)
-            }
-            .padding(24)
-        }
-        .navigationBarTitleDisplayMode(.inline)
-    }
-}
 
 // MARK: - Preview
 
@@ -362,6 +320,6 @@ struct SignInView: View {
 
 #Preview("Email Sign In") {
     NavigationStack {
-        SignInView()
+        EmailSignInView()
     }
 }

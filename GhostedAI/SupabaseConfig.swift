@@ -1,5 +1,5 @@
 //
-//  SupabaseConfig 2.swift
+//  SupabaseConfig.swift
 //  GhostedAI
 //
 //  Created by Adam Zaorski on 10/6/25.

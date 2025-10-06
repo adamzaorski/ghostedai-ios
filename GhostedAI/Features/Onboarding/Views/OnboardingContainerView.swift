@@ -53,8 +53,8 @@ struct OnboardingContainerView: View {
                 }
             }
 
-            // Back button & progress (hidden on section breaks and special screens)
-            if !viewModel.isSectionBreak && !viewModel.isSpecialScreen {
+            // Back button & progress (hidden only on special screens like review/signin/paywall)
+            if !viewModel.isSpecialScreen {
                 backButton
             }
         }
