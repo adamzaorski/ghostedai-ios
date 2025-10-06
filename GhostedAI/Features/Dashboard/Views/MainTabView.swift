@@ -13,22 +13,43 @@ struct MainTabView: View {
                     Label("Dashboard", systemImage: selectedTab == 0 ? "square.grid.2x2.fill" : "square.grid.2x2")
                 }
                 .tag(0)
+                .toolbarBackground(.black, for: .tabBar)
 
             // Chat Tab
-            ChatPlaceholderView()
+            ChatView()
                 .tabItem {
                     Label("Chat", systemImage: selectedTab == 1 ? "message.fill" : "message")
                 }
                 .tag(1)
+                .toolbarBackground(.black, for: .tabBar)
+
+            // Missions Tab
+            MissionsPlaceholderView()
+                .tabItem {
+                    Label("Missions", systemImage: selectedTab == 2 ? "target" : "target")
+                }
+                .tag(2)
+                .toolbarBackground(.black, for: .tabBar)
 
             // Profile Tab
             ProfileView()
                 .tabItem {
-                    Label("Profile", systemImage: selectedTab == 2 ? "person.fill" : "person")
+                    Label("Profile", systemImage: selectedTab == 3 ? "person.fill" : "person")
                 }
-                .tag(2)
+                .tag(3)
+                .toolbarBackground(.black, for: .tabBar)
         }
         .tint(Color(hex: 0xFF6B35)) // Orange tint for selected tab
+        .toolbarBackground(.black, for: .tabBar)
+        .toolbarBackground(.visible, for: .tabBar)
+        .preferredColorScheme(.dark)
+        .onAppear {
+            // Force tab bar to update when view appears
+            let tabBar = UITabBar.appearance()
+            tabBar.backgroundColor = .black
+            tabBar.barTintColor = .black
+            tabBar.isTranslucent = false
+        }
     }
 }
 

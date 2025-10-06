@@ -12,27 +12,58 @@ import SwiftData
 struct GhostedAIApp: App {
 
     init() {
-        // Configure tab bar appearance GLOBALLY before any views load
+        // FORCE BLACK TAB BAR - Configure EVERY appearance property
         let appearance = UITabBarAppearance()
+
+        // Start with opaque configuration
         appearance.configureWithOpaqueBackground()
+
+        // Force black background in EVERY way possible
         appearance.backgroundColor = .black
         appearance.backgroundEffect = nil
+        appearance.shadowColor = nil
+        appearance.shadowImage = nil
 
-        // Configure tab item colors
-        appearance.stackedLayoutAppearance.normal.iconColor = UIColor(red: 0.4, green: 0.4, blue: 0.4, alpha: 1.0)
-        appearance.stackedLayoutAppearance.normal.titleTextAttributes = [
-            .foregroundColor: UIColor(red: 0.4, green: 0.4, blue: 0.4, alpha: 1.0)
-        ]
+        // Configure ALL layout appearances (stacked, inline, compact)
+        let inactiveColor = UIColor(red: 0.4, green: 0.4, blue: 0.4, alpha: 1.0)
+        let activeColor = UIColor(red: 1.0, green: 0.42, blue: 0.21, alpha: 1.0)
 
-        appearance.stackedLayoutAppearance.selected.iconColor = UIColor(red: 1.0, green: 0.42, blue: 0.21, alpha: 1.0)
-        appearance.stackedLayoutAppearance.selected.titleTextAttributes = [
-            .foregroundColor: UIColor(red: 1.0, green: 0.42, blue: 0.21, alpha: 1.0)
-        ]
+        // Stacked layout (default for iPhone)
+        appearance.stackedLayoutAppearance.normal.iconColor = inactiveColor
+        appearance.stackedLayoutAppearance.normal.titleTextAttributes = [.foregroundColor: inactiveColor]
+        appearance.stackedLayoutAppearance.normal.badgeBackgroundColor = activeColor
 
-        // Apply globally
+        appearance.stackedLayoutAppearance.selected.iconColor = activeColor
+        appearance.stackedLayoutAppearance.selected.titleTextAttributes = [.foregroundColor: activeColor]
+        appearance.stackedLayoutAppearance.selected.badgeBackgroundColor = activeColor
+
+        // Inline layout
+        appearance.inlineLayoutAppearance.normal.iconColor = inactiveColor
+        appearance.inlineLayoutAppearance.normal.titleTextAttributes = [.foregroundColor: inactiveColor]
+        appearance.inlineLayoutAppearance.selected.iconColor = activeColor
+        appearance.inlineLayoutAppearance.selected.titleTextAttributes = [.foregroundColor: activeColor]
+
+        // Compact layout
+        appearance.compactInlineLayoutAppearance.normal.iconColor = inactiveColor
+        appearance.compactInlineLayoutAppearance.normal.titleTextAttributes = [.foregroundColor: inactiveColor]
+        appearance.compactInlineLayoutAppearance.selected.iconColor = activeColor
+        appearance.compactInlineLayoutAppearance.selected.titleTextAttributes = [.foregroundColor: activeColor]
+
+        // Apply to ALL tab bar states
         UITabBar.appearance().standardAppearance = appearance
         UITabBar.appearance().scrollEdgeAppearance = appearance
+
+        // iOS 15+
+        if #available(iOS 15.0, *) {
+            UITabBar.appearance().scrollEdgeAppearance = appearance
+        }
+
+        // Force properties directly on UITabBar
+        UITabBar.appearance().barTintColor = .black
+        UITabBar.appearance().backgroundColor = .black
         UITabBar.appearance().isTranslucent = false
+        UITabBar.appearance().tintColor = UIColor(red: 1.0, green: 0.42, blue: 0.21, alpha: 1.0)
+        UITabBar.appearance().unselectedItemTintColor = UIColor(red: 0.4, green: 0.4, blue: 0.4, alpha: 1.0)
     }
 
     var sharedModelContainer: ModelContainer = {

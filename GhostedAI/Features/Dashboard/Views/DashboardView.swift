@@ -1,14 +1,14 @@
 import SwiftUI
 
-/// Main dashboard view - completely redesigned for visual hierarchy
+/// Main dashboard view - redesigned with Total Days No-Contact as PRIMARY hero metric
 struct DashboardView: View {
     @StateObject private var viewModel = DashboardViewModel()
     @State private var showCheckIn = false
-    @State private var showShareSheet = false
+    @State private var showDayLoggedConfirmation = false
 
     var body: some View {
         NavigationStack {
-            ZStack {
+            ZStack(alignment: .bottom) {
                 // Pure black background
                 Color.black
                     .ignoresSafeArea()
@@ -20,13 +20,15 @@ struct DashboardView: View {
                 } else {
                     mainContent
                 }
+
+                // Fixed CTA button above tab bar
+                ctaButton
+                    .padding(.horizontal, 20)
+                    .padding(.bottom, 8)
             }
             .navigationBarHidden(true)
             .sheet(isPresented: $showCheckIn) {
                 CheckInView()
-            }
-            .sheet(isPresented: $showShareSheet) {
-                ShareSheet(items: [viewModel.shareProgress()])
             }
             .task {
                 await viewModel.loadUserData()
@@ -42,377 +44,434 @@ struct DashboardView: View {
     private var mainContent: some View {
         ScrollView {
             VStack(spacing: 20) {
-                // Header with greeting
-                headerSection
+                // 1. Welcome Header
+                welcomeHeader
                     .padding(.top, 32)
                     .padding(.horizontal, 20)
 
-                // Card 1: Heatmap (darkest, most prominent)
-                heatmapCard
+                // 2. Total Days No-Contact (PRIMARY HERO CARD)
+                totalDaysHeroCard
                     .padding(.horizontal, 20)
 
-                // Card 2: Daily Check-in (medium background, orange border when pending)
-                checkInCard
+                // 3. Current Streak Card
+                currentStreakCard
                     .padding(.horizontal, 20)
 
-                // Card 3: Progress Stats (lighter background, clean)
-                statsCard
+                // 4. No-Contact Progress Chart
+                progressChartCard
                     .padding(.horizontal, 20)
 
-                Spacer(minLength: 100)
+                // 5. Milestones Strip
+                milestonesSection
+
+                // 6. Quick Stats Card
+                quickStatsCard
+                    .padding(.horizontal, 20)
+
+                // Bottom padding for fixed CTA button
+                Spacer()
+                    .frame(height: 80)
             }
         }
     }
 
-    // MARK: - Header Section
+    // MARK: - 1. Welcome Header
 
-    private var headerSection: some View {
+    private var welcomeHeader: some View {
         VStack(alignment: .leading, spacing: 8) {
             Text("Hi, \(viewModel.userName)")
                 .font(.system(size: 32, weight: .bold))
                 .foregroundColor(.white)
 
             Text("Great work! Every action here makes you stronger. Keep it up!")
-                .font(.system(size: 15, weight: .regular))
+                .font(.system(size: 16, weight: .regular))
                 .foregroundColor(Color(hex: 0x999999))
-                .lineSpacing(4)
+                .lineSpacing(2)
         }
         .frame(maxWidth: .infinity, alignment: .leading)
     }
 
-    // MARK: - Card 1: Binary Heatmap (Darkest Card)
+    // MARK: - 2. Total Days No-Contact (HERO)
 
-    private var heatmapCard: some View {
-        VStack(alignment: .leading, spacing: 16) {
-            // Header
-            HStack(alignment: .center) {
-                Image(systemName: "calendar")
+    private var totalDaysHeroCard: some View {
+        GlassCard(style: .premium) {
+            VStack(spacing: 8) {
+                // Title
+                Text("Days No Contact")
                     .font(.system(size: 20, weight: .semibold))
                     .foregroundColor(.white)
 
-                Text("Daily Progress")
-                    .font(.system(size: 18, weight: .semibold))
-                    .foregroundColor(.white)
-
                 Spacer()
+                    .frame(height: 8)
 
-                // Streak badge
-                HStack(spacing: 4) {
-                    Image(systemName: "flame.fill")
-                        .font(.system(size: 12, weight: .bold))
-                        .foregroundColor(Color(hex: 0xFF6B35))
-
-                    Text("\(viewModel.currentStreak)")
-                        .font(.system(size: 16, weight: .bold))
-                        .foregroundColor(Color(hex: 0xFF6B35))
-                }
-            }
-
-            // Binary Heatmap Grid
-            binaryHeatmapGrid
-
-            // Footer
-            Text("Current streak: \(viewModel.currentStreak) days")
-                .font(.system(size: 13, weight: .regular))
-                .foregroundColor(Color(hex: 0x666666))
-        }
-        .padding(16)
-        .background(Color(hex: 0x0D0D0D))
-        .clipShape(RoundedRectangle(cornerRadius: 16))
-        .overlay(
-            RoundedRectangle(cornerRadius: 16)
-                .stroke(Color.white.opacity(0.05), lineWidth: 1)
-        )
-    }
-
-    // Binary heatmap grid - checked in (orange) or not (dark)
-    private var binaryHeatmapGrid: some View {
-        VStack(spacing: 8) {
-            // Month labels
-            monthLabelsRow
-
-            // Grid of squares
-            heatmapGridRows
-        }
-    }
-
-    private var monthLabelsRow: some View {
-        HStack(spacing: 0) {
-            // Offset for day labels
-            Color.clear.frame(width: 20)
-
-            ForEach(["Sep", "Oct", "Nov", "Dec"], id: \.self) { month in
-                Text(month)
-                    .font(.system(size: 12, weight: .semibold))
-                    .foregroundColor(Color(hex: 0x666666))
-                    .frame(maxWidth: .infinity, alignment: .leading)
-            }
-        }
-    }
-
-    private var heatmapGridRows: some View {
-        HStack(alignment: .top, spacing: 4) {
-            // Day labels (M, W, F only)
-            VStack(spacing: 3) {
-                Text("M")
-                    .font(.system(size: 10, weight: .medium))
-                    .foregroundColor(Color(hex: 0x666666))
-                    .frame(width: 14, height: 10)
-                Color.clear.frame(height: 10)
-                Text("W")
-                    .font(.system(size: 10, weight: .medium))
-                    .foregroundColor(Color(hex: 0x666666))
-                    .frame(width: 14, height: 10)
-                Color.clear.frame(height: 10)
-                Text("F")
-                    .font(.system(size: 10, weight: .medium))
-                    .foregroundColor(Color(hex: 0x666666))
-                    .frame(width: 14, height: 10)
-                Color.clear.frame(height: 10)
-                Color.clear.frame(height: 10)
-            }
-
-            // Grid of 7 rows x 13 columns
-            LazyHGrid(rows: Array(repeating: GridItem(.fixed(10), spacing: 3), count: 7), spacing: 3) {
-                ForEach(0..<13, id: \.self) { col in
-                    ForEach(0..<7, id: \.self) { row in
-                        let isCheckedIn = viewModel.heatmapData[row][col] > 0
-                        binaryCell(isCheckedIn: isCheckedIn)
-                            .id("cell-\(row)-\(col)")
-                    }
-                }
-            }
-        }
-    }
-
-    private func binaryCell(isCheckedIn: Bool) -> some View {
-        RoundedRectangle(cornerRadius: 2)
-            .fill(isCheckedIn ? Color(hex: 0xFF6B35) : Color(hex: 0x1A1A1A))
-            .frame(width: 10, height: 10)
-    }
-
-    // MARK: - Card 2: Daily Check-in (Horizontal Layout)
-
-    private var checkInCard: some View {
-        HStack(spacing: 16) {
-            // Left: Orange circle icon
-            ZStack {
-                Circle()
-                    .fill(
+                // MASSIVE NUMBER with gradient
+                Text("\(viewModel.totalDaysNoContact) days")
+                    .font(.system(size: 96, weight: .bold))
+                    .foregroundStyle(
                         LinearGradient(
                             colors: [Color(hex: 0xFF6B35), Color(hex: 0xFF8E53)],
                             startPoint: .topLeading,
                             endPoint: .bottomTrailing
                         )
                     )
-                    .frame(width: 48, height: 48)
 
-                Image(systemName: viewModel.hasCheckedInToday ? "checkmark.circle.fill" : "clock.fill")
-                    .font(.system(size: 22, weight: .semibold))
-                    .foregroundColor(.white)
-            }
-
-            // Middle: Text content
-            VStack(alignment: .leading, spacing: 4) {
-                Text(viewModel.hasCheckedInToday ? "Checked in today!" : "Daily Check-in Pending")
-                    .font(.system(size: 17, weight: .semibold))
-                    .foregroundColor(.white)
-                    .lineSpacing(2)
-
-                Text(viewModel.hasCheckedInToday ? "You're doing great today" : "How are you feeling today?")
-                    .font(.system(size: 14, weight: .regular))
-                    .foregroundColor(Color(hex: 0x999999))
-                    .lineSpacing(2)
-            }
-
-            Spacer()
-
-            // Right: Check In button (if not checked in)
-            if !viewModel.hasCheckedInToday {
-                Button(action: {
-                    showCheckIn = true
-                }) {
-                    Text("Check In")
-                        .font(.system(size: 15, weight: .semibold))
-                        .foregroundColor(.white)
-                        .padding(.horizontal, 20)
-                        .padding(.vertical, 10)
-                        .background(
-                            LinearGradient(
-                                colors: [Color(hex: 0xFF6B35), Color(hex: 0xFF8E53)],
-                                startPoint: .leading,
-                                endPoint: .trailing
-                            )
-                        )
-                        .clipShape(Capsule())
+                // Since date
+                if let breakupDate = viewModel.breakupDate {
+                    Text("Since \(breakupDate, formatter: monthDayFormatter)")
+                        .font(.system(size: 14, weight: .regular))
+                        .foregroundColor(Color(hex: 0x999999))
                 }
-                .buttonStyle(ScaleButtonStyle())
             }
+            .frame(maxWidth: .infinity)
+            .padding(.vertical, 32)
+            .padding(.horizontal, 24)
         }
-        .padding(16)
-        .background(Color(hex: 0x1A1A1A))
-        .clipShape(RoundedRectangle(cornerRadius: 20))
-        .overlay(
-            RoundedRectangle(cornerRadius: 20)
-                .stroke(
-                    viewModel.hasCheckedInToday
-                        ? Color.white.opacity(0.05)
-                        : Color(hex: 0xFF6B35).opacity(0.3),
-                    lineWidth: 1
-                )
-        )
     }
 
-    // MARK: - Card 3: Progress Stats (Lighter Background)
+    // MARK: - 3. Current Streak Card
 
-    private var statsCard: some View {
-        VStack(spacing: 20) {
-            // Header
-            HStack {
-                Image(systemName: "chart.line.uptrend.xyaxis")
-                    .font(.system(size: 20, weight: .semibold))
-                    .foregroundColor(.white)
-
-                Text("Progress Stats")
+    private var currentStreakCard: some View {
+        GlassCard(style: .premium) {
+            VStack(alignment: .leading, spacing: 12) {
+                Text("Current Streak")
                     .font(.system(size: 18, weight: .semibold))
                     .foregroundColor(.white)
 
-                Spacer()
+                HStack(spacing: 16) {
+                    // Fire emoji
+                    Text("🔥")
+                        .font(.system(size: 40))
 
-                // Share button
-                Button(action: {
-                    showShareSheet = true
-                }) {
-                    HStack(spacing: 4) {
-                        Image(systemName: "square.and.arrow.up")
-                            .font(.system(size: 13, weight: .semibold))
-                        Text("Share")
-                            .font(.system(size: 14, weight: .semibold))
-                    }
+                    // Streak number
+                    Text("\(viewModel.currentStreak) days")
+                        .font(.system(size: 48, weight: .bold))
+                        .foregroundStyle(
+                            LinearGradient(
+                                colors: [Color(hex: 0xFF6B35), Color(hex: 0xFF8E53)],
+                                startPoint: .topLeading,
+                                endPoint: .bottomTrailing
+                            )
+                        )
+                }
+
+                Text("Your longest: \(viewModel.personalBestStreak) days")
+                    .font(.system(size: 14, weight: .regular))
+                    .foregroundColor(Color(hex: 0x999999))
+            }
+            .frame(maxWidth: .infinity, alignment: .leading)
+            .padding(20)
+        }
+    }
+
+    // MARK: - 4. No-Contact Progress Chart
+
+    private var progressChartCard: some View {
+        GlassCard(style: .premium) {
+            VStack(alignment: .leading, spacing: 16) {
+                Text("Last 90 Days")
+                    .font(.system(size: 18, weight: .semibold))
                     .foregroundColor(.white)
-                    .padding(.horizontal, 14)
-                    .padding(.vertical, 8)
-                    .background(
+
+                // Month labels
+                monthLabels
+
+                // GitHub-style heatmap
+                heatmapGrid
+
+                Text("Each square = one day no contact")
+                    .font(.system(size: 12, weight: .regular))
+                    .foregroundColor(Color(hex: 0x999999))
+            }
+            .padding(20)
+        }
+    }
+
+    private var monthLabels: some View {
+        HStack(spacing: 0) {
+            ForEach(viewModel.monthLabels, id: \.self) { label in
+                Text(label)
+                    .font(.system(size: 14, weight: .regular))
+                    .foregroundColor(Color(hex: 0x999999))
+                    .frame(maxWidth: .infinity, alignment: .leading)
+            }
+        }
+        .padding(.leading, 30) // Offset for day labels
+    }
+
+    private var heatmapGrid: some View {
+        HStack(alignment: .top, spacing: 3) {
+            // Day labels (S M T W T F S)
+            VStack(spacing: 3) {
+                ForEach(["S", "M", "T", "W", "T", "F", "S"], id: \.self) { day in
+                    Text(day)
+                        .font(.system(size: 12, weight: .regular))
+                        .foregroundColor(Color(hex: 0x999999))
+                        .frame(width: 10, height: 10)
+                }
+            }
+            .padding(.trailing, 8)
+
+            // Heatmap cells (13 weeks × 7 days)
+            LazyHGrid(rows: Array(repeating: GridItem(.fixed(10), spacing: 3), count: 7), spacing: 3) {
+                ForEach(0..<91, id: \.self) { index in
+                    heatmapCell(for: index)
+                }
+            }
+        }
+    }
+
+    private func heatmapCell(for index: Int) -> some View {
+        let cellData = viewModel.heatmapData[index]
+
+        return RoundedRectangle(cornerRadius: 2)
+            .fill(cellColor(for: cellData))
+            .overlay(
+                RoundedRectangle(cornerRadius: 2)
+                    .stroke(cellData == .future ? Color(hex: 0xFF6B35) : Color.clear, lineWidth: 1)
+            )
+            .frame(width: 10, height: 10)
+    }
+
+    private func cellColor(for data: HeatmapCellData) -> Color {
+        switch data {
+        case .logged:
+            return Color(hex: 0xFF6B35) // Orange - day logged
+        case .missed:
+            return Color(hex: 0x1A1A1A) // Dark - missed
+        case .future:
+            return Color.clear // Empty with border
+        }
+    }
+
+    // MARK: - 5. Milestones Section
+
+    private var milestonesSection: some View {
+        VStack(alignment: .leading, spacing: 12) {
+            Text("Milestones")
+                .font(.system(size: 16, weight: .semibold))
+                .foregroundColor(.white)
+                .padding(.leading, 20)
+
+            ScrollView(.horizontal, showsIndicators: false) {
+                HStack(spacing: 12) {
+                    ForEach(viewModel.milestones, id: \.days) { milestone in
+                        milestoneCard(milestone)
+                    }
+                }
+                .padding(.horizontal, 20)
+            }
+        }
+    }
+
+    private func milestoneCard(_ milestone: Milestone) -> some View {
+        let isUnlocked = viewModel.totalDaysNoContact >= milestone.days
+        let isNext = viewModel.totalDaysNoContact + 1 == milestone.days
+
+        return VStack(spacing: 8) {
+            // Icon
+            Image(systemName: isUnlocked ? "checkmark" : "lock.fill")
+                .font(.system(size: 24, weight: .semibold))
+                .foregroundColor(isUnlocked ? .white : (isNext ? Color(hex: 0xFF6B35) : Color(hex: 0x999999)))
+
+            // Number
+            Text("\(milestone.days)")
+                .font(.system(size: 32, weight: .bold))
+                .foregroundColor(isUnlocked ? .white : (isNext ? Color(hex: 0xFF6B35) : Color(hex: 0x999999)))
+
+            // Label
+            Text("days")
+                .font(.system(size: 12, weight: .regular))
+                .foregroundColor(isUnlocked ? .white : (isNext ? Color(hex: 0xFF6B35) : Color(hex: 0x999999)))
+        }
+        .frame(width: 100, height: 120)
+        .background(
+            isUnlocked
+                ? Color(hex: 0xFF6B35)
+                : Color.clear
+        )
+        .overlay(
+            RoundedRectangle(cornerRadius: 12)
+                .stroke(
+                    isUnlocked ? Color.clear : (isNext ? Color(hex: 0xFF6B35) : Color(hex: 0x333333)),
+                    lineWidth: isNext ? 2 : 1
+                )
+        )
+        .clipShape(RoundedRectangle(cornerRadius: 12))
+    }
+
+    // MARK: - 6. Quick Stats Card
+
+    private var quickStatsCard: some View {
+        GlassCard(style: .premium) {
+            VStack(alignment: .leading, spacing: 16) {
+                Text("Your Numbers")
+                    .font(.system(size: 18, weight: .semibold))
+                    .foregroundColor(.white)
+
+                HStack(spacing: 0) {
+                    // Left column - Current Streak
+                    VStack(spacing: 8) {
+                        Text("\(viewModel.currentStreak) days")
+                            .font(.system(size: 36, weight: .bold))
+                            .foregroundStyle(
+                                LinearGradient(
+                                    colors: [Color(hex: 0xFF6B35), Color(hex: 0xFF8E53)],
+                                    startPoint: .topLeading,
+                                    endPoint: .bottomTrailing
+                                )
+                            )
+
+                        Text("Current streak")
+                            .font(.system(size: 14, weight: .regular))
+                            .foregroundColor(Color(hex: 0x999999))
+                    }
+                    .frame(maxWidth: .infinity)
+
+                    // Divider
+                    Rectangle()
+                        .fill(Color.white.opacity(0.1))
+                        .frame(width: 1)
+
+                    // Right column - Using App
+                    VStack(spacing: 8) {
+                        Text("\(viewModel.daysUsingApp) days")
+                            .font(.system(size: 36, weight: .bold))
+                            .foregroundColor(.white)
+
+                        Text("Using app")
+                            .font(.system(size: 14, weight: .regular))
+                            .foregroundColor(Color(hex: 0x999999))
+                    }
+                    .frame(maxWidth: .infinity)
+                }
+            }
+            .padding(24)
+        }
+    }
+
+    // MARK: - 7. Fixed CTA Button
+
+    private var ctaButton: some View {
+        Button(action: {
+            if !viewModel.hasLoggedToday {
+                Task {
+                    await viewModel.logTodayNoContact()
+                    withAnimation(.spring(response: 0.3, dampingFraction: 0.7)) {
+                        showDayLoggedConfirmation = true
+                    }
+                    try? await Task.sleep(nanoseconds: 2_000_000_000)
+                    withAnimation(.spring(response: 0.3, dampingFraction: 0.7)) {
+                        showDayLoggedConfirmation = false
+                    }
+                }
+            }
+        }) {
+            HStack(spacing: 8) {
+                if viewModel.hasLoggedToday {
+                    Image(systemName: "checkmark")
+                        .font(.system(size: 18, weight: .semibold))
+                }
+
+                Text(viewModel.hasLoggedToday ? "✓ Day Logged" : "Log Today No-Contact")
+                    .font(.system(size: 18, weight: .semibold))
+            }
+            .foregroundColor(.white)
+            .frame(maxWidth: .infinity)
+            .frame(height: 54)
+            .background(
+                Group {
+                    if viewModel.hasLoggedToday {
+                        Color(hex: 0x333333)
+                    } else {
                         LinearGradient(
                             colors: [Color(hex: 0xFF6B35), Color(hex: 0xFF8E53)],
                             startPoint: .leading,
                             endPoint: .trailing
                         )
-                    )
-                    .clipShape(Capsule())
+                    }
                 }
-                .buttonStyle(ScaleButtonStyle(scale: 0.97))
-            }
-
-            // Two columns with separator
-            HStack(spacing: 0) {
-                // Left: Days since breakup
-                VStack(spacing: 8) {
-                    Text("\(viewModel.daysSinceBreakup)")
-                        .font(.system(size: 40, weight: .bold))
-                        .foregroundColor(Color(hex: 0xFF6B35))
-
-                    Text("days")
-                        .font(.system(size: 14, weight: .medium))
-                        .foregroundColor(Color(hex: 0xFF6B35).opacity(0.8))
-
-                    Text("Since breakup")
-                        .font(.system(size: 13, weight: .regular))
-                        .foregroundColor(Color(hex: 0x999999))
-                }
-                .frame(maxWidth: .infinity)
-
-                // Divider
-                Rectangle()
-                    .fill(Color(hex: 0x333333))
-                    .frame(width: 1, height: 80)
-
-                // Right: Days using app
-                VStack(spacing: 8) {
-                    Text("\(viewModel.daysUsingApp)")
-                        .font(.system(size: 40, weight: .bold))
-                        .foregroundColor(Color(hex: 0x34C759))
-
-                    Text("days")
-                        .font(.system(size: 14, weight: .medium))
-                        .foregroundColor(Color(hex: 0x34C759).opacity(0.8))
-
-                    Text("Using app")
-                        .font(.system(size: 13, weight: .regular))
-                        .foregroundColor(Color(hex: 0x999999))
-                }
-                .frame(maxWidth: .infinity)
-            }
+            )
+            .clipShape(RoundedRectangle(cornerRadius: 27))
         }
-        .padding(16)
-        .background(Color(hex: 0x242424))
-        .clipShape(RoundedRectangle(cornerRadius: 24))
+        .disabled(viewModel.hasLoggedToday)
         .overlay(
-            RoundedRectangle(cornerRadius: 24)
-                .stroke(Color.white.opacity(0.08), lineWidth: 1)
+            Group {
+                if showDayLoggedConfirmation {
+                    Text("Day logged!")
+                        .font(.system(size: 16, weight: .semibold))
+                        .foregroundColor(.white)
+                        .padding(.horizontal, 20)
+                        .padding(.vertical, 12)
+                        .background(Color(hex: 0x4CAF50))
+                        .clipShape(RoundedRectangle(cornerRadius: 20))
+                        .offset(y: -70)
+                        .transition(.move(edge: .bottom).combined(with: .opacity))
+                }
+            }
         )
     }
 
-    // MARK: - Loading View
+    // MARK: - Loading & Error States
 
     private var loadingView: some View {
-        VStack(spacing: 20) {
+        VStack(spacing: 16) {
             ProgressView()
-                .progressViewStyle(CircularProgressViewStyle(tint: .white))
+                .tint(Color(hex: 0xFF6B35))
                 .scaleEffect(1.5)
 
             Text("Loading your progress...")
-                .font(.system(size: 17, weight: .regular))
+                .font(.system(size: 16, weight: .regular))
                 .foregroundColor(Color(hex: 0x999999))
         }
     }
 
-    // MARK: - Error View
-
     private var errorView: some View {
-        VStack(spacing: 20) {
+        VStack(spacing: 16) {
             Image(systemName: "exclamationmark.triangle.fill")
                 .font(.system(size: 48))
                 .foregroundColor(Color(hex: 0xFF6B35))
 
             Text(viewModel.errorMessage ?? "Something went wrong")
-                .font(.system(size: 17, weight: .regular))
-                .foregroundColor(Color(hex: 0x999999))
+                .font(.system(size: 16, weight: .regular))
+                .foregroundColor(.white)
                 .multilineTextAlignment(.center)
 
             Button("Try Again") {
                 Task {
-                    await viewModel.loadUserData()
+                    await viewModel.refresh()
                 }
             }
-            .font(.system(size: 17, weight: .semibold))
+            .font(.system(size: 16, weight: .semibold))
             .foregroundColor(.white)
-            .padding(.horizontal, 32)
-            .padding(.vertical, 16)
-            .background(
-                LinearGradient(
-                    colors: [Color(hex: 0xFF6B35), Color(hex: 0xFF8E53)],
-                    startPoint: .leading,
-                    endPoint: .trailing
-                )
-            )
-            .clipShape(RoundedRectangle(cornerRadius: 14))
-            .buttonStyle(ScaleButtonStyle())
+            .padding(.horizontal, 24)
+            .padding(.vertical, 12)
+            .background(Color(hex: 0xFF6B35))
+            .clipShape(RoundedRectangle(cornerRadius: 20))
         }
-        .padding(32)
+        .padding(.horizontal, 40)
+    }
+
+    // MARK: - Date Formatter
+
+    private var monthDayFormatter: DateFormatter {
+        let formatter = DateFormatter()
+        formatter.dateFormat = "MMM d"
+        return formatter
     }
 }
 
-// MARK: - Share Sheet
+// MARK: - Heatmap Cell Data
 
-struct ShareSheet: UIViewControllerRepresentable {
-    let items: [Any]
+enum HeatmapCellData {
+    case logged   // Orange square
+    case missed   // Dark square
+    case future   // Empty with orange border
+}
 
-    func makeUIViewController(context: Context) -> UIActivityViewController {
-        UIActivityViewController(activityItems: items, applicationActivities: nil)
-    }
+// MARK: - Milestone Model
 
-    func updateUIViewController(_ uiViewController: UIActivityViewController, context: Context) {}
+struct Milestone {
+    let days: Int
 }
 
 // MARK: - Preview
