@@ -5,6 +5,8 @@ struct QuestionView: View {
     let question: OnboardingQuestion
     @Binding var answer: OnboardingAnswer
     var onSkip: (() -> Void)?
+    var onPaywallComplete: (() -> Void)?
+    var onBack: (() -> Void)?
 
     // Local state for inputs
     @State private var textInput: String = ""
@@ -34,8 +36,12 @@ struct QuestionView: View {
 
             case .paywallPlaceholder:
                 PaywallPlaceholderView(
-                    onStartTrial: { onSkip?() },
-                    onSeeAllPlans: { /* TODO: Show all plans */ }
+                    onStartTrial: {
+                        // TODO: Replace with actual Adapty subscription flow
+                        onPaywallComplete?()
+                    },
+                    onSeeAllPlans: { /* TODO: Show all plans */ },
+                    onBack: onBack
                 )
 
             default:

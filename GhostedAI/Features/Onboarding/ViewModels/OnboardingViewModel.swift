@@ -1,6 +1,7 @@
 import Foundation
 import SwiftUI
 import Combine
+import Auth
 
 /// Manages the onboarding flow state and user answers
 @MainActor
@@ -9,6 +10,8 @@ class OnboardingViewModel: ObservableObject {
     @Published var answers: [Int: OnboardingAnswer] = [:]
     @Published var showExitConfirmation: Bool = false
     @Published var navigateToPaywall: Bool = false
+    @Published var navigateToDashboard: Bool = false
+    @Published var isUserAuthenticated: Bool = false
 
     let questions: [OnboardingQuestion] = [
         // SECTION 1: THE DAMAGE REPORT
@@ -396,6 +399,23 @@ class OnboardingViewModel: ObservableObject {
     func goToNextQuestion() {
         guard canGoNext else { return }
 
+        // Check if we're about to navigate to screen 28 (Save Progress / Sign-In)
+        // Screen 28 has ID 28 in the questions array
+        let nextIndex = currentQuestionIndex + 1
+        if nextIndex < questions.count {
+            let nextQuestion = questions[nextIndex]
+
+            // If next screen is the sign-in prompt (screen 28) and user is authenticated, skip it
+            if case .signInPrompt = nextQuestion.questionType, isUserAuthenticated {
+                print("⏭️ [Onboarding] User authenticated - skipping screen 28 (Save Progress)")
+                // Skip screen 28 and go directly to screen 29
+                withAnimation(.spring(response: 0.4, dampingFraction: 0.8)) {
+                    currentQuestionIndex += 2 // Skip screen 28
+                }
+                return
+            }
+        }
+
         if currentQuestionIndex < questions.count - 1 {
             withAnimation(.spring(response: 0.4, dampingFraction: 0.8)) {
                 currentQuestionIndex += 1
@@ -408,6 +428,23 @@ class OnboardingViewModel: ObservableObject {
 
     func goToPreviousQuestion() {
         guard canGoBack else { return }
+
+        // Check if current screen is 29 and user is authenticated (meaning we skipped 28)
+        // If so, go back 2 screens to skip over the hidden screen 28
+        let currentQuestion = questions[currentQuestionIndex]
+        if case .paywallPlaceholder = currentQuestion.questionType, isUserAuthenticated {
+            // Check if previous screen would be sign-in prompt (28)
+            if currentQuestionIndex > 1 {
+                let prevQuestion = questions[currentQuestionIndex - 1]
+                if case .signInPrompt = prevQuestion.questionType {
+                    print("⏮️ [Onboarding] User authenticated - skipping back over screen 28")
+                    withAnimation(.spring(response: 0.4, dampingFraction: 0.8)) {
+                        currentQuestionIndex -= 2 // Skip screen 28 going backwards
+                    }
+                    return
+                }
+            }
+        }
 
         withAnimation(.spring(response: 0.4, dampingFraction: 0.8)) {
             currentQuestionIndex -= 1
@@ -423,12 +460,110 @@ class OnboardingViewModel: ObservableObject {
     }
 
     func completeOnboarding() {
-        // Save completion state
+        print("🎉 [Onboarding] Completing onboarding - saving to Supabase...")
+
+        // Save completion state locally
         UserDefaults.standard.set(true, forKey: "hasCompletedOnboarding")
         saveAnswersLocally()
 
+        // Save to Supabase asynchronously
+        Task {
+            await saveToSupabase()
+        }
+
         // Navigate to paywall
         navigateToPaywall = true
+    }
+
+    /// Save onboarding answers and user profile to Supabase
+    private func saveToSupabase() async {
+        print("💾 [Onboarding] Starting Supabase save...")
+
+        do {
+            // Get current user
+            guard let user = try await SupabaseService.shared.getCurrentUser() else {
+                print("❌ [Onboarding] No authenticated user - cannot save to Supabase")
+                return
+            }
+
+            let userId = user.id
+            print("👤 [Onboarding] User ID: \(userId)")
+            print("📝 [Onboarding] Total answers to save: \(answers.count)")
+            print("📝 [Onboarding] Raw answers dictionary:")
+            for (index, answer) in answers.sorted(by: { $0.key < $1.key }) {
+                print("   Q\(index): text=\(answer.textAnswer ?? "nil"), option=\(answer.selectedOption ?? "nil"), number=\(answer.numberAnswer?.description ?? "nil")")
+            }
+
+            // Convert answers to dictionary format for Supabase
+            var answersDict: [String: Any] = [:]
+            for (questionIndex, answer) in answers {
+                answersDict["\(questionIndex)"] = answer.toDictionary()
+            }
+
+            print("📦 [Onboarding] Converted answers: \(answersDict.keys.sorted())")
+            print("📦 [Onboarding] Sample converted answer for Q2: \(answersDict["2"] ?? "nil")")
+
+            // Save onboarding answers to Supabase
+            print("⬆️ [Onboarding] Saving onboarding answers to Supabase...")
+            try await SupabaseService.shared.saveOnboardingAnswers(
+                userId: userId,
+                answers: answersDict
+            )
+            print("✅ [Onboarding] Onboarding answers saved successfully!")
+
+            // Extract user profile data from answers
+            var firstName = "User"
+            var age = 25
+            var gender: String?
+            var relationshipOrientation: String?
+
+            // Question 8 is typically the user's name
+            if let nameAnswer = answers[8], let name = nameAnswer.textAnswer, !name.isEmpty {
+                firstName = name
+                print("👤 [Onboarding] Found first name: \(firstName)")
+            }
+
+            // Question 9 is typically age
+            if let ageAnswer = answers[9], let ageValue = ageAnswer.numberAnswer {
+                age = ageValue
+                print("🎂 [Onboarding] Found age: \(age)")
+            }
+
+            // Question 10 might be gender
+            if let genderAnswer = answers[10], let genderValue = genderAnswer.selectedOption {
+                gender = genderValue
+                print("👥 [Onboarding] Found gender: \(genderValue)")
+            }
+
+            // Save user profile to Supabase
+            print("⬆️ [Onboarding] Saving user profile to Supabase...")
+            try await SupabaseService.shared.saveUserProfile(
+                userId: userId,
+                firstName: firstName,
+                age: age,
+                gender: gender,
+                relationshipOrientation: relationshipOrientation
+            )
+            print("✅ [Onboarding] User profile saved successfully!")
+            print("🎊 [Onboarding] ALL DATA SAVED TO SUPABASE!")
+
+        } catch {
+            print("❌ [Onboarding] Failed to save to Supabase: \(error)")
+            print("❌ [Onboarding] Error details: \(error.localizedDescription)")
+        }
+    }
+
+    func completePaywall() {
+        print("🎉 [Onboarding] Paywall complete - ensuring data is saved before navigating...")
+
+        // Save to Supabase synchronously BEFORE navigating
+        Task {
+            await saveToSupabase()
+
+            // Only navigate after save completes
+            print("✅ [Onboarding] Data saved, now navigating to Dashboard")
+            navigateToDashboard = true
+        }
     }
 
     // MARK: - Local Storage
@@ -445,6 +580,23 @@ class OnboardingViewModel: ObservableObject {
         if let data = UserDefaults.standard.data(forKey: "onboardingAnswers"),
            let decoded = try? JSONDecoder().decode([Int: OnboardingAnswer].self, from: data) {
             answers = decoded
+        }
+    }
+
+    /// Check if user is currently authenticated
+    func checkAuthentication() async {
+        print("🔐 [Onboarding] Checking authentication status...")
+        do {
+            let user = try await SupabaseService.shared.getCurrentUser()
+            isUserAuthenticated = user != nil
+            if isUserAuthenticated {
+                print("✅ [Onboarding] User is authenticated - will skip screen 28")
+            } else {
+                print("ℹ️ [Onboarding] User not authenticated - will show screen 28")
+            }
+        } catch {
+            print("⚠️ [Onboarding] Auth check failed: \(error.localizedDescription)")
+            isUserAuthenticated = false
         }
     }
 

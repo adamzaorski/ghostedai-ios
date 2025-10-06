@@ -4,8 +4,10 @@ import SwiftUI
 struct PaywallPlaceholderView: View {
     var onStartTrial: () -> Void
     var onSeeAllPlans: () -> Void
+    var onBack: (() -> Void)? = nil
 
     @State private var selectedPlan: PlanType = .individual
+    @State private var isLoading = false
 
     enum PlanType {
         case family
@@ -81,6 +83,28 @@ struct PaywallPlaceholderView: View {
                 }
                 .padding(.top, 8)
                 .padding(.bottom, 24)
+            }
+
+            // Back button overlay (top-left)
+            if let onBack = onBack {
+                VStack {
+                    HStack {
+                        Button(action: onBack) {
+                            Image(systemName: "chevron.left")
+                                .font(.system(size: 18, weight: .semibold))
+                                .foregroundColor(.black)
+                                .frame(width: 44, height: 44)
+                                .contentShape(Rectangle())
+                        }
+                        .buttonStyle(ScaleButtonStyle(scale: 0.95))
+                        .padding(.leading, Spacing.m)
+                        .padding(.top, 12)
+
+                        Spacer()
+                    }
+
+                    Spacer()
+                }
             }
         }
     }
@@ -258,16 +282,39 @@ struct PaywallPlaceholderView: View {
     // MARK: - CTA Button
 
     private var ctaButton: some View {
-        Button(action: onStartTrial) {
-            Text("Start My 3-Day Free Trial")
-                .font(.system(size: 18, weight: .semibold))
-                .foregroundColor(.white)
-                .frame(maxWidth: .infinity, minHeight: 56)
-                .background(Color.black)
-                .clipShape(RoundedRectangle(cornerRadius: 14))
+        Button(action: handleStartTrial) {
+            HStack(spacing: 12) {
+                if isLoading {
+                    ProgressView()
+                        .progressViewStyle(CircularProgressViewStyle(tint: .white))
+                        .scaleEffect(0.9)
+                }
+
+                Text(isLoading ? "Starting Trial..." : "Start My 3-Day Free Trial")
+                    .font(.system(size: 18, weight: .semibold))
+                    .foregroundColor(.white)
+            }
+            .frame(maxWidth: .infinity, minHeight: 56)
+            .background(Color.black)
+            .clipShape(RoundedRectangle(cornerRadius: 14))
         }
         .buttonStyle(ScaleButtonStyle())
         .padding(.horizontal, 24)
+        .disabled(isLoading)
+    }
+
+    // MARK: - Actions
+
+    private func handleStartTrial() {
+        // Show loading state
+        isLoading = true
+
+        // TODO: Replace with actual Adapty subscription flow
+        // Simulate subscription process with 1 second delay
+        DispatchQueue.main.asyncAfter(deadline: .now() + 1.0) {
+            isLoading = false
+            onStartTrial()
+        }
     }
 
     // MARK: - Helper
@@ -283,6 +330,7 @@ struct PaywallPlaceholderView: View {
 #Preview {
     PaywallPlaceholderView(
         onStartTrial: {},
-        onSeeAllPlans: {}
+        onSeeAllPlans: {},
+        onBack: { print("Back tapped") }
     )
 }

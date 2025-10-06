@@ -169,11 +169,20 @@ final class SupabaseService {
         gender: String? = nil,
         relationshipOrientation: String? = nil
     ) async throws {
+        print("🟢 [SupabaseService] saveUserProfile() called")
+        print("🟢 [SupabaseService] User ID: \(userId)")
+        print("🟢 [SupabaseService] First Name: \(firstName)")
+        print("🟢 [SupabaseService] Age: \(age)")
+        print("🟢 [SupabaseService] Gender: \(gender ?? "nil")")
+        print("🟢 [SupabaseService] Relationship Orientation: \(relationshipOrientation ?? "nil")")
+
         guard !firstName.isEmpty else {
+            print("❌ [SupabaseService] Error: First name is empty!")
             throw SupabaseError.invalidData("First name cannot be empty")
         }
 
         guard age > 0, age < 150 else {
+            print("❌ [SupabaseService] Error: Invalid age: \(age)")
             throw SupabaseError.invalidData("Invalid age")
         }
 
@@ -186,12 +195,20 @@ final class SupabaseService {
             createdAt: ISO8601DateFormatter().string(from: Date())
         )
 
+        print("⬆️ [SupabaseService] Attempting INSERT to user_profiles table...")
+
         do {
-            try await client
+            let response = try await client
                 .from("user_profiles")
                 .insert(profile)
                 .execute()
+
+            print("✅ [SupabaseService] INSERT successful!")
+            print("✅ [SupabaseService] Response status: \(response.response.statusCode ?? 0)")
         } catch {
+            print("❌ [SupabaseService] INSERT failed!")
+            print("❌ [SupabaseService] Error: \(error)")
+            print("❌ [SupabaseService] Error localized: \(error.localizedDescription)")
             throw SupabaseError.databaseError("Failed to save user profile: \(error.localizedDescription)")
         }
     }
@@ -204,15 +221,26 @@ final class SupabaseService {
     ///   - answers: Dictionary of onboarding answers (questionId -> answer data)
     /// - Throws: SupabaseError if save fails
     func saveOnboardingAnswers(userId: UUID, answers: [String: Any]) async throws {
+        print("🔵 [SupabaseService] saveOnboardingAnswers() called")
+        print("🔵 [SupabaseService] User ID: \(userId)")
+        print("🔵 [SupabaseService] Answers count: \(answers.count)")
+        print("🔵 [SupabaseService] Answers keys: \(answers.keys.sorted())")
+
         guard !answers.isEmpty else {
+            print("❌ [SupabaseService] Error: Answers dictionary is empty!")
             throw SupabaseError.invalidData("Onboarding answers cannot be empty")
         }
 
         // Convert answers dictionary to JSON data
         let answersData: Data
         do {
-            answersData = try JSONSerialization.data(withJSONObject: answers, options: [])
+            answersData = try JSONSerialization.data(withJSONObject: answers, options: [.prettyPrinted])
+            if let jsonString = String(data: answersData, encoding: .utf8) {
+                print("📄 [SupabaseService] JSON payload preview (first 500 chars):")
+                print(String(jsonString.prefix(500)))
+            }
         } catch {
+            print("❌ [SupabaseService] Failed to encode answers to JSON: \(error)")
             throw SupabaseError.invalidData("Failed to encode onboarding answers: \(error.localizedDescription)")
         }
 
@@ -222,12 +250,20 @@ final class SupabaseService {
             completedAt: ISO8601DateFormatter().string(from: Date())
         )
 
+        print("⬆️ [SupabaseService] Attempting INSERT to onboarding_answers table...")
+
         do {
-            try await client
+            let response = try await client
                 .from("onboarding_answers")
                 .insert(onboardingData)
                 .execute()
+
+            print("✅ [SupabaseService] INSERT successful!")
+            print("✅ [SupabaseService] Response status: \(response.response.statusCode ?? 0)")
         } catch {
+            print("❌ [SupabaseService] INSERT failed!")
+            print("❌ [SupabaseService] Error: \(error)")
+            print("❌ [SupabaseService] Error localized: \(error.localizedDescription)")
             throw SupabaseError.databaseError("Failed to save onboarding answers: \(error.localizedDescription)")
         }
     }

@@ -154,6 +154,19 @@ extension Color {
 }
 
 extension UIColor {
+    /// Initialize UIColor from hex value
+    /// - Parameters:
+    ///   - hex: Hexadecimal color value (e.g., 0xFF6B35)
+    ///   - alpha: Alpha value (0.0 to 1.0)
+    convenience init(hex: UInt, alpha: CGFloat = 1.0) {
+        self.init(
+            red: CGFloat((hex >> 16) & 0xFF) / 255.0,
+            green: CGFloat((hex >> 8) & 0xFF) / 255.0,
+            blue: CGFloat(hex & 0xFF) / 255.0,
+            alpha: alpha
+        )
+    }
+
     /// Initialize adaptive UIColor for light/dark mode
     convenience init(light: UIColor, dark: UIColor) {
         self.init { traitCollection in

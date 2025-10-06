@@ -1,184 +1,254 @@
 import SwiftUI
 import StoreKit
 
-/// App Store review prompt screen
+/// App Store review prompt screen - redesigned for Midnight Warmth aesthetic
 struct AppReviewPromptView: View {
     var onContinue: () -> Void
     var onSkip: () -> Void
 
+    @State private var showSuccessMessage = false
+    @State private var opacity: Double = 0
+
+    // Testimonials with authentic Gen Z voice
+    private let testimonials = [
+        Testimonial(
+            initial: "S.M.",
+            quote: "finally an app that doesn't feel like therapy homework",
+            stars: 5
+        ),
+        Testimonial(
+            initial: "J.K.",
+            quote: "the AI gets me better than my friends did lol",
+            stars: 5
+        ),
+        Testimonial(
+            initial: "A.R.",
+            quote: "literally the only breakup app that isn't cringe",
+            stars: 5
+        )
+    ]
+
     var body: some View {
         ScrollView {
-            VStack(alignment: .leading, spacing: 32) {
-                // Title
-                Text("Give us a rating")
-                    .font(.system(size: 28, weight: .bold))
-                    .foregroundColor(.DS.textPrimary)
+            VStack(spacing: Spacing.xl) {
+                Spacer()
+                    .frame(height: 40)
 
-                // Social proof card
-                socialProofCard
+                // Header
+                headerSection
+
+                Spacer()
+                    .frame(height: 8)
+
+                // Rating Card
+                ratingCard
+
+                // Testimonials
+                testimonialsSection
 
                 Spacer()
                     .frame(height: 20)
 
-                // Section title
-                Text("GhostedAI was made for people like you")
-                    .font(.system(size: 20, weight: .semibold))
-                    .foregroundColor(.DS.textPrimary)
-                    .multilineTextAlignment(.center)
-                    .frame(maxWidth: .infinity)
-
-                // User avatars
-                HStack(spacing: -12) {
-                    ForEach(0..<3) { _ in
-                        Image(systemName: "person.circle.fill")
-                            .font(.system(size: 50))
-                            .foregroundColor(.DS.surfaceElevated)
-                            .background(
-                                Circle()
-                                    .fill(Color.DS.primaryBlack)
-                                    .frame(width: 54, height: 54)
-                            )
-                    }
-                }
-                .frame(maxWidth: .infinity)
-
-                Text("5M+ GhostedAI Users")
-                    .font(.system(size: 14, weight: .medium))
-                    .foregroundColor(.DS.textSecondary)
-                    .frame(maxWidth: .infinity)
-
-                // Testimonial card
-                testimonialCard
+                // CTA Buttons
+                ctaButtons
 
                 Spacer()
-                    .frame(height: 20)
+                    .frame(height: 40)
+            }
+            .padding(.horizontal, Spacing.l)
+        }
+        .opacity(opacity)
+        .onAppear {
+            withAnimation(.easeOut(duration: 0.6)) {
+                opacity = 1
+            }
+        }
+        .overlay(
+            successMessageOverlay
+        )
+    }
 
-                // Leave Review button
-                Button(action: handleLeaveReview) {
-                    HStack(spacing: 8) {
-                        Text("Leave a Review")
-                            .font(.system(size: 17, weight: .semibold))
-                            .foregroundColor(.white)
+    // MARK: - Header Section
 
-                        Text("⭐")
-                            .font(.system(size: 17))
-                    }
-                    .frame(maxWidth: .infinity, minHeight: 54)
-                    .background(
+    private var headerSection: some View {
+        VStack(spacing: 12) {
+            Text("Enjoying the journey so far?")
+                .font(.system(size: 32, weight: .bold))
+                .foregroundColor(.DS.textPrimary)
+                .multilineTextAlignment(.center)
+
+            Text("Your support means everything to us")
+                .font(.system(size: 17, weight: .regular))
+                .foregroundColor(.DS.textSecondary)
+                .multilineTextAlignment(.center)
+        }
+    }
+
+    // MARK: - Rating Card
+
+    private var ratingCard: some View {
+        GlassCard(style: .premium) {
+            VStack(spacing: 16) {
+                // Large rating number with gradient
+                Text("4.8")
+                    .font(.system(size: 64, weight: .bold))
+                    .foregroundStyle(
                         LinearGradient(
-                            colors: [
-                                Color.DS.accentOrangeStart,
-                                Color.DS.accentOrangeEnd
-                            ],
+                            colors: [Color(hex: 0xFF6B35), Color(hex: 0xFF8E53)],
                             startPoint: .leading,
                             endPoint: .trailing
                         )
                     )
-                    .clipShape(RoundedRectangle(cornerRadius: 14))
-                    .shadow(
-                        color: Color.DS.accentOrangeStart.opacity(0.3),
-                        radius: 20,
-                        x: 0,
-                        y: 10
-                    )
-                }
-                .buttonStyle(ScaleButtonStyle())
 
-                // Maybe later button
-                Button(action: onSkip) {
-                    Text("Maybe later")
-                        .font(.system(size: 14, weight: .medium))
-                        .foregroundColor(.DS.textSecondary)
-                }
-                .frame(maxWidth: .infinity)
-                .buttonStyle(ScaleButtonStyle(scale: 0.98))
-            }
-            .padding(.horizontal, 24)
-            .padding(.vertical, 40)
-        }
-    }
-
-    // MARK: - Social Proof Card
-
-    private var socialProofCard: some View {
-        VStack(spacing: 12) {
-            // Star rating
-            HStack(spacing: 4) {
-                Text("4.8")
-                    .font(.system(size: 48, weight: .bold))
-                    .foregroundColor(Color.DS.accentOrangeStart)
-
-                VStack(alignment: .leading, spacing: 4) {
-                    HStack(spacing: 2) {
-                        ForEach(0..<5) { _ in
-                            Image(systemName: "star.fill")
-                                .font(.system(size: 16))
-                                .foregroundColor(Color.DS.accentOrangeStart)
-                        }
+                // 5 stars
+                HStack(spacing: 4) {
+                    ForEach(0..<5, id: \.self) { _ in
+                        Image(systemName: "star.fill")
+                            .font(.system(size: 20, weight: .semibold))
+                            .foregroundColor(Color(hex: 0xFF6B35))
                     }
-
-                    Text("100K+ App Ratings")
-                        .font(.system(size: 14, weight: .medium))
-                        .foregroundColor(.DS.textSecondary)
                 }
+
+                // Rating count
+                Text("Based on 100K+ ratings")
+                    .font(.system(size: 14, weight: .medium))
+                    .foregroundColor(Color(hex: 0x8E8E93))
             }
+            .frame(maxWidth: .infinity)
+            .padding(.vertical, 32)
+            .padding(.horizontal, 24)
         }
-        .frame(maxWidth: .infinity)
-        .padding(.vertical, 24)
-        .padding(.horizontal, 20)
-        .background(
-            RoundedRectangle(cornerRadius: 16)
-                .fill(.ultraThinMaterial)
-                .overlay(
-                    RoundedRectangle(cornerRadius: 16)
-                        .stroke(Color.white.opacity(0.1), lineWidth: 1)
-                )
-        )
     }
 
-    // MARK: - Testimonial Card
+    // MARK: - Testimonials Section
 
-    private var testimonialCard: some View {
-        HStack(alignment: .top, spacing: 16) {
-            // Avatar
-            Image(systemName: "person.crop.circle.fill")
-                .font(.system(size: 44))
-                .foregroundColor(.DS.surfaceElevated)
+    private var testimonialsSection: some View {
+        VStack(spacing: 16) {
+            ForEach(testimonials) { testimonial in
+                testimonialCard(testimonial)
+            }
+        }
+    }
 
-            VStack(alignment: .leading, spacing: 8) {
-                // Name and stars
+    private func testimonialCard(_ testimonial: Testimonial) -> some View {
+        GlassCard(style: .premium) {
+            VStack(alignment: .leading, spacing: 12) {
+                // User initial and stars
                 HStack {
-                    Text("Sarah M.")
-                        .font(.system(size: 16, weight: .bold))
-                        .foregroundColor(.DS.textPrimary)
+                    // Initial badge
+                    ZStack {
+                        Circle()
+                            .fill(
+                                LinearGradient(
+                                    colors: [Color(hex: 0xFF6B35), Color(hex: 0xFF8E53)],
+                                    startPoint: .topLeading,
+                                    endPoint: .bottomTrailing
+                                )
+                            )
+                            .frame(width: 40, height: 40)
+
+                        Text(testimonial.initial)
+                            .font(.system(size: 16, weight: .bold))
+                            .foregroundColor(.white)
+                    }
 
                     Spacer()
 
+                    // Stars
                     HStack(spacing: 2) {
-                        ForEach(0..<5) { _ in
+                        ForEach(0..<testimonial.stars, id: \.self) { _ in
                             Image(systemName: "star.fill")
-                                .font(.system(size: 12))
-                                .foregroundColor(Color.DS.accentOrangeStart)
+                                .font(.system(size: 14, weight: .semibold))
+                                .foregroundColor(Color(hex: 0xFF6B35))
                         }
                     }
                 }
 
                 // Quote
-                Text("This app actually gets it. No toxic positivity BS. Just real support when I needed it most.")
-                    .font(.system(size: 15, weight: .regular))
-                    .foregroundColor(.DS.textSecondary)
+                Text("\"\(testimonial.quote)\"")
+                    .font(.system(size: 16, weight: .regular))
+                    .foregroundColor(.DS.textPrimary)
                     .lineSpacing(4)
+                    .italic()
+            }
+            .padding(20)
+        }
+    }
+
+    // MARK: - CTA Buttons
+
+    private var ctaButtons: some View {
+        VStack(spacing: 16) {
+            // Leave Review button
+            Button(action: handleLeaveReview) {
+                HStack(spacing: 8) {
+                    Text("Leave a Review")
+                        .font(.system(size: 17, weight: .bold))
+                        .foregroundColor(.white)
+
+                    Text("⭐")
+                        .font(.system(size: 17))
+                }
+                .frame(maxWidth: .infinity, minHeight: 56)
+                .background(
+                    LinearGradient(
+                        colors: [Color(hex: 0xFF6B35), Color(hex: 0xFF8E53)],
+                        startPoint: .leading,
+                        endPoint: .trailing
+                    )
+                )
+                .clipShape(RoundedRectangle(cornerRadius: 16))
+                .shadow(
+                    color: Color(hex: 0xFF6B35).opacity(0.4),
+                    radius: 20,
+                    x: 0,
+                    y: 10
+                )
+            }
+            .buttonStyle(ScaleButtonStyle())
+
+            // Maybe later button
+            Button(action: onSkip) {
+                Text("Maybe later")
+                    .font(.system(size: 15, weight: .medium))
+                    .foregroundColor(Color(hex: 0x8E8E93))
+            }
+            .buttonStyle(ScaleButtonStyle(scale: 0.98))
+        }
+    }
+
+    // MARK: - Success Message Overlay
+
+    private var successMessageOverlay: some View {
+        Group {
+            if showSuccessMessage {
+                ZStack {
+                    Color.black.opacity(0.4)
+                        .ignoresSafeArea()
+
+                    VStack(spacing: 16) {
+                        Image(systemName: "checkmark.circle.fill")
+                            .font(.system(size: 64, weight: .semibold))
+                            .foregroundColor(Color(hex: 0xFF6B35))
+
+                        Text("Thank you!")
+                            .font(.system(size: 24, weight: .bold))
+                            .foregroundColor(.white)
+
+                        Text("Your support helps us grow")
+                            .font(.system(size: 16, weight: .regular))
+                            .foregroundColor(Color(hex: 0xAAAAAA))
+                    }
+                    .padding(40)
+                    .background(
+                        RoundedRectangle(cornerRadius: 24)
+                            .fill(Color(hex: 0x1C1C1E))
+                    )
+                    .padding(40)
+                }
+                .transition(.opacity)
             }
         }
-        .padding(20)
-        .background(
-            RoundedRectangle(cornerRadius: 16)
-                .fill(.ultraThinMaterial)
-                .overlay(
-                    RoundedRectangle(cornerRadius: 16)
-                        .stroke(Color.white.opacity(0.1), lineWidth: 1)
-                )
-        )
     }
 
     // MARK: - Actions
@@ -189,10 +259,35 @@ struct AppReviewPromptView: View {
             SKStoreReviewController.requestReview(in: scene)
         }
 
-        // Continue to next screen
-        onContinue()
+        // Show success message
+        withAnimation(.easeInOut(duration: 0.3)) {
+            showSuccessMessage = true
+        }
+
+        // Auto-advance after brief delay
+        DispatchQueue.main.asyncAfter(deadline: .now() + 1.5) {
+            withAnimation(.easeInOut(duration: 0.3)) {
+                showSuccessMessage = false
+            }
+
+            // Continue to next screen
+            DispatchQueue.main.asyncAfter(deadline: .now() + 0.3) {
+                onContinue()
+            }
+        }
     }
 }
+
+// MARK: - Testimonial Model
+
+struct Testimonial: Identifiable {
+    let id = UUID()
+    let initial: String
+    let quote: String
+    let stars: Int
+}
+
+// MARK: - Preview
 
 #Preview {
     ZStack {

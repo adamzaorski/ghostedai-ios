@@ -66,7 +66,7 @@ struct EmailSignInView: View {
                 OnboardingContainerView()
             }
             .navigationDestination(isPresented: $viewModel.shouldNavigateToDashboard) {
-                DashboardPlaceholderView()
+                MainTabView()
             }
             .onChange(of: viewModel.errorMessage) { oldValue, newValue in
                 if newValue != nil {

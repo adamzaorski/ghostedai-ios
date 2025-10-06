@@ -53,4 +53,30 @@ struct OnboardingAnswer: Codable {
         if dateAnswer != nil { return false }
         return true
     }
+
+    /// Convert to dictionary for Supabase storage
+    func toDictionary() -> [String: Any] {
+        var dict: [String: Any] = ["questionId": questionId]
+
+        if let text = textAnswer {
+            dict["textAnswer"] = text
+        }
+        if let option = selectedOption {
+            dict["selectedOption"] = option
+        }
+        if let options = selectedOptions {
+            dict["selectedOptions"] = options
+        }
+        if let number = numberAnswer {
+            dict["numberAnswer"] = number
+        }
+        if let date = dateAnswer {
+            dict["dateAnswer"] = ISO8601DateFormatter().string(from: date)
+        }
+        if let skip = skipped {
+            dict["skipped"] = skip
+        }
+
+        return dict
+    }
 }

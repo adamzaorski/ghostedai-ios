@@ -7,6 +7,7 @@ struct OnboardingContainerView: View {
 
     @State private var showExitConfirmation = false
     @State private var navigateToPaywall = false
+    @State private var navigateToDashboard = false
 
     var body: some View {
         ZStack {
@@ -29,6 +30,12 @@ struct OnboardingContainerView: View {
                             ),
                             onSkip: {
                                 viewModel.skipCurrentQuestion()
+                            },
+                            onPaywallComplete: {
+                                viewModel.completePaywall()
+                            },
+                            onBack: {
+                                handleBack()
                             }
                         )
                         .id(viewModel.currentQuestion.id)
@@ -62,6 +69,9 @@ struct OnboardingContainerView: View {
         .navigationDestination(isPresented: $navigateToPaywall) {
             PaywallView()
         }
+        .fullScreenCover(isPresented: $navigateToDashboard) {
+            MainTabView()
+        }
         .alert("Exit Onboarding?", isPresented: $showExitConfirmation) {
             Button("Cancel", role: .cancel) {}
             Button("Exit", role: .destructive) {
@@ -75,7 +85,14 @@ struct OnboardingContainerView: View {
                 navigateToPaywall = true
             }
         }
-        .onAppear {
+        .onChange(of: viewModel.navigateToDashboard) { _, newValue in
+            if newValue {
+                navigateToDashboard = true
+            }
+        }
+        .task {
+            // Check authentication status and load saved answers
+            await viewModel.checkAuthentication()
             viewModel.loadAnswers()
         }
     }
