@@ -24,7 +24,7 @@ struct MainTabView: View {
                 .toolbarBackground(.black, for: .tabBar)
 
             // Missions Tab
-            MissionsPlaceholderView()
+            MissionsView()
                 .tabItem {
                     Label("Missions", systemImage: selectedTab == 2 ? "target" : "target")
                 }

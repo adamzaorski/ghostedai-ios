@@ -1,12 +1,12 @@
 import SwiftUI
 
-struct DashboardView: View {
+struct MissionsView: View {
     var body: some View {
         ZStack {
             Color.black
                 .ignoresSafeArea()
 
-            Text("Dashboard - Redesigning")
+            Text("Missions - Redesigning")
                 .foregroundColor(.white)
                 .font(.title2)
         }
@@ -14,5 +14,5 @@ struct DashboardView: View {
 }
 
 #Preview {
-    DashboardView()
+    MissionsView()
 }
