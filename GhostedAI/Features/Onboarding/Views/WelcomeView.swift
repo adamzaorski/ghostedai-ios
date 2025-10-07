@@ -134,11 +134,11 @@ struct WelcomeView: View {
             Button(action: handleSignIn) {
                 HStack(spacing: 4) {
                     Text("Already have an account?")
-                        .typography(.bodyMedium)
+                        .font(.system(size: 14, weight: .regular))
                         .foregroundColor(.DS.textSecondary)
 
                     Text("Sign in")
-                        .typography(.bodyMedium)
+                        .font(.system(size: 14, weight: .regular))
                         .foregroundColor(Color.DS.accentOrangeStart)
                 }
             }

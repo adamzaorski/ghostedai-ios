@@ -12,4 +12,10 @@ enum HeatmapCellData {
 
 struct Milestone {
     let days: Int
+    let isStreak: Bool
+
+    init(days: Int, isStreak: Bool = false) {
+        self.days = days
+        self.isStreak = isStreak
+    }
 }
