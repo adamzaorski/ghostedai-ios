@@ -13,7 +13,7 @@ struct ChatView: View {
             VStack(spacing: 0) {
                 // Messages ScrollView
                 ScrollViewReader { proxy in
-                    ScrollView {
+                    ScrollView(showsIndicators: false) {
                         LazyVStack(spacing: 20) {
                             // Top padding
                             Color.clear.frame(height: 20)
