@@ -35,7 +35,12 @@ class DashboardViewModel: ObservableObject {
 
     /// Load all user data from Supabase
     func loadUserData() async {
-        print("📊 [Dashboard] ==================== LOADING DASHBOARD DATA ====================")
+        let timestamp = ISO8601DateFormatter().string(from: Date())
+        print("📊 [Dashboard] ==================== LOADING DASHBOARD DATA [\(timestamp)] ====================")
+        print("📊 [Dashboard] Current values BEFORE load:")
+        print("   - totalDaysNoContact: \(totalDaysNoContact)")
+        print("   - currentStreak: \(currentStreak)")
+        print("   - hasLoggedToday: \(hasLoggedToday)")
         isLoading = true
         errorMessage = nil
 
@@ -85,11 +90,13 @@ class DashboardViewModel: ObservableObject {
 
                 // Total days = count of success check-ins
                 totalDaysNoContact = successCheckIns.count
-                print("📊 [Dashboard] Total days no-contact: \(totalDaysNoContact)")
+                print("📊 [Dashboard] SET totalDaysNoContact = \(totalDaysNoContact)")
+                print("📊 [Dashboard] @Published property updated, should trigger UI refresh")
 
                 // Calculate current streak
                 currentStreak = calculateCurrentStreak(from: checkIns)
-                print("📊 [Dashboard] Current streak: \(currentStreak) days")
+                print("📊 [Dashboard] SET currentStreak = \(currentStreak)")
+                print("📊 [Dashboard] @Published property updated, should trigger UI refresh")
 
                 // Calculate longest streak
                 personalBestStreak = calculateLongestStreak(from: checkIns)
@@ -103,11 +110,16 @@ class DashboardViewModel: ObservableObject {
                 hasLoggedToday = checkIns.contains { checkIn in
                     if let checkInDate = dateFormatter.date(from: checkIn.date),
                        let checkInStartOfDay = calendar.date(from: calendar.dateComponents([.year, .month, .day], from: checkInDate)) {
-                        return calendar.isDate(checkInStartOfDay, inSameDayAs: today)
+                        let isToday = calendar.isDate(checkInStartOfDay, inSameDayAs: today)
+                        if isToday {
+                            print("📊 [Dashboard] Found check-in for TODAY: \(checkIn.date)")
+                        }
+                        return isToday
                     }
                     return false
                 }
-                print("📊 [Dashboard] Has logged today: \(hasLoggedToday) (using Calendar comparison)")
+                print("📊 [Dashboard] SET hasLoggedToday = \(hasLoggedToday)")
+                print("📊 [Dashboard] @Published property updated, should disable button")
 
                 // Generate heatmap from real data
                 generateHeatmapFromCheckIns(checkIns)
@@ -126,6 +138,7 @@ class DashboardViewModel: ObservableObject {
             print("   🏆 Personal best: \(personalBestStreak)")
             print("   ✓ Has logged today: \(hasLoggedToday)")
             print("   🎯 Milestones unlocked: \(milestones.filter { totalDaysNoContact >= $0.days }.map { $0.days })")
+            print("   🗓️ Heatmap logged days: \(heatmapData.filter { $0 == .logged }.count)")
             print("================================================================================")
 
         } catch {
@@ -134,6 +147,12 @@ class DashboardViewModel: ObservableObject {
         }
 
         isLoading = false
+
+        print("📊 [Dashboard] Final state AFTER load:")
+        print("   - totalDaysNoContact: \(totalDaysNoContact)")
+        print("   - currentStreak: \(currentStreak)")
+        print("   - hasLoggedToday: \(hasLoggedToday)")
+        print("   - isLoading: \(isLoading)")
     }
 
     /// Load user profile to get first name
