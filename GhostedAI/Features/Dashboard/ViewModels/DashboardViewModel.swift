@@ -33,59 +33,100 @@ class DashboardViewModel: ObservableObject {
     // MARK: - Initialization
 
     init() {
-        generateMockData()
+        // Start with empty state - data will be loaded when view appears
+        print("🎬 [DashboardViewModel] Initialized with empty state")
     }
 
     // MARK: - Data Loading
 
     /// Load all user data from Supabase
     func loadUserData() async {
-        print("📊 [Dashboard] Loading dashboard data...")
+        print("📊 [Dashboard] ==================== LOADING DASHBOARD DATA ====================")
         isLoading = true
         errorMessage = nil
 
         do {
-            // Get current user
+            // STEP 1: Verify user authentication
+            print("📊 [Dashboard] STEP 1: Verifying user authentication...")
             guard let user = try await SupabaseService.shared.getCurrentUser() else {
-                print("⚠️ [Dashboard] No authenticated user found")
+                print("⚠️ [Dashboard] NO AUTHENTICATED USER FOUND")
                 errorMessage = "Please sign in to continue"
                 isLoading = false
                 return
             }
+            print("✅ [Dashboard] User authenticated - user_id: \(user.id)")
 
-            print("✅ [Dashboard] User authenticated: \(user.id)")
+            // STEP 2: Fetch ALL check-ins for this user
+            print("📊 [Dashboard] STEP 2: Fetching ALL check-ins from Supabase...")
+            let checkIns = try await SupabaseService.shared.getCheckIns(userId: user.id)
+            print("📊 [Dashboard] Check-ins found in database: \(checkIns.count)")
 
-            // Load user profile for first name
+            if checkIns.isEmpty {
+                print("📊 [Dashboard] Detailed check-ins: NONE")
+            } else {
+                print("📊 [Dashboard] Detailed check-ins (first 5):")
+                for (index, checkIn) in checkIns.prefix(5).enumerated() {
+                    print("   [\(index + 1)] date: \(checkIn.date), type: \(checkIn.type)")
+                }
+            }
+
+            // STEP 3: Determine initial state based on check-ins
+            print("📊 [Dashboard] STEP 3: Calculating stats from check-ins...")
+
+            if checkIns.isEmpty {
+                print("⚠️ [Dashboard] NO CHECK-INS FOUND - Using empty state")
+                totalDaysNoContact = 0
+                currentStreak = 0
+                personalBestStreak = 0
+                hasLoggedToday = false
+                heatmapData = Array(repeating: .missed, count: 91)
+                print("📊 [Dashboard] Empty state applied: 0 days, 0 streak, empty heatmap")
+            } else {
+                print("📊 [Dashboard] Processing \(checkIns.count) check-ins...")
+
+                // Filter success check-ins only
+                let successCheckIns = checkIns.filter { $0.type == "success" }
+                print("📊 [Dashboard] Success check-ins: \(successCheckIns.count)")
+                print("📊 [Dashboard] Slip check-ins: \(checkIns.count - successCheckIns.count)")
+
+                // Total days = count of success check-ins
+                totalDaysNoContact = successCheckIns.count
+                print("📊 [Dashboard] Total days no-contact: \(totalDaysNoContact)")
+
+                // Calculate current streak
+                currentStreak = calculateCurrentStreak(from: checkIns)
+                print("📊 [Dashboard] Current streak: \(currentStreak) days")
+
+                // Calculate longest streak
+                personalBestStreak = calculateLongestStreak(from: checkIns)
+                print("📊 [Dashboard] Personal best streak: \(personalBestStreak) days")
+
+                // Check if logged today
+                let today = ISO8601DateFormatter().string(from: Date()).prefix(10) // YYYY-MM-DD
+                hasLoggedToday = checkIns.contains { $0.date.starts(with: today) }
+                print("📊 [Dashboard] Has logged today: \(hasLoggedToday)")
+
+                // Generate heatmap from real data
+                generateHeatmapFromCheckIns(checkIns)
+                print("📊 [Dashboard] Heatmap generated with \(heatmapData.count) cells")
+            }
+
+            // Load user profile for first name (non-critical)
             await loadUserProfile(userId: user.id)
 
-            // Load breakup date and calculate total days no-contact
-            await loadBreakupDate(userId: user.id)
+            // Generate month labels for heatmap
+            generateMonthLabels()
 
-            // TODO: Load real data from Supabase
-            // - currentStreak from check_ins table (consecutive days logged)
-            // - personalBestStreak from check_ins table (longest streak ever)
-            // - daysUsingApp from user created_at date
-            // - hasLoggedToday from check_ins table (check if today's date exists)
-            // - heatmapData from check_ins table (last 90 days)
-
-            // For now, use mock data based on total days
-            currentStreak = totalDaysNoContact // Mock: same as total days
-            personalBestStreak = totalDaysNoContact + 3 // Mock: slightly higher
-            daysUsingApp = totalDaysNoContact + 6 // Mock: started using app a few days later
-            hasLoggedToday = false
-
-            // Generate mock heatmap
-            generateMockHeatmap()
-
-            print("✅ [Dashboard] Data loaded successfully")
+            print("✅ [Dashboard] ==================== DATA LOADED SUCCESSFULLY ====================")
             print("   📊 Total days no-contact: \(totalDaysNoContact)")
             print("   🔥 Current streak: \(currentStreak)")
             print("   🏆 Personal best: \(personalBestStreak)")
-            print("   📱 Days using app: \(daysUsingApp)")
+            print("   ✓ Has logged today: \(hasLoggedToday)")
             print("   🎯 Milestones unlocked: \(milestones.filter { totalDaysNoContact >= $0.days }.map { $0.days })")
+            print("================================================================================")
 
         } catch {
-            print("❌ [Dashboard] Failed to load data: \(error.localizedDescription)")
+            print("❌ [Dashboard] FATAL ERROR loading data: \(error.localizedDescription)")
             errorMessage = "Failed to load dashboard data"
         }
 
@@ -159,93 +200,117 @@ class DashboardViewModel: ObservableObject {
         }
     }
 
-    /// Load breakup date from onboarding answers and calculate total days no-contact
-    private func loadBreakupDate(userId: UUID) async {
-        print("🔍 [Dashboard] Fetching breakup date for user_id: \(userId)")
+    // MARK: - Streak Calculations
 
-        do {
-            let answers = try await SupabaseService.shared.getOnboardingAnswers(userId: userId)
+    /// Calculate current streak (consecutive days from today backwards)
+    private func calculateCurrentStreak(from checkIns: [SupabaseService.CheckIn]) -> Int {
+        print("🔥 [Dashboard] Calculating current streak...")
 
-            if let answers = answers {
-                // Look for breakup date in onboarding answers
-                // Assuming question ID for breakup date (might need to adjust)
-                for (key, value) in answers {
-                    if let answerDict = value as? [String: Any],
-                       let dateString = answerDict["dateAnswer"] as? String {
+        let calendar = Calendar.current
+        let dateFormatter = ISO8601DateFormatter()
 
-                        // Try to parse ISO8601 date
-                        let formatter = ISO8601DateFormatter()
-                        if let date = formatter.date(from: dateString) {
-                            breakupDate = date
-
-                            // Calculate total days no-contact
-                            let calendar = Calendar.current
-                            let components = calendar.dateComponents([.day], from: date, to: Date())
-                            totalDaysNoContact = max(0, components.day ?? 0)
-
-                            print("✅ [Dashboard] Breakup date loaded: \(date)")
-                            print("✅ [Dashboard] Total days no-contact calculated: \(totalDaysNoContact)")
-                            return
-                        }
-                    }
+        // Parse all check-in dates
+        var checkInDates: Set<Date> = []
+        for checkIn in checkIns where checkIn.type == "success" {
+            if let date = dateFormatter.date(from: checkIn.date) {
+                // Normalize to start of day
+                if let startOfDay = calendar.date(from: calendar.dateComponents([.year, .month, .day], from: date)) {
+                    checkInDates.insert(startOfDay)
                 }
-
-                print("⚠️ [Dashboard] Breakup date not found in onboarding answers")
             }
-
-            // Fallback: use mock date (12 days ago)
-            let mockDate = Calendar.current.date(byAdding: .day, value: -12, to: Date())!
-            breakupDate = mockDate
-            totalDaysNoContact = 12
-            print("ℹ️ [Dashboard] Using mock breakup date: 12 days ago")
-
-        } catch {
-            print("❌ [Dashboard] Failed to load breakup date: \(error.localizedDescription)")
-            // Use mock data
-            let mockDate = Calendar.current.date(byAdding: .day, value: -12, to: Date())!
-            breakupDate = mockDate
-            totalDaysNoContact = 12
         }
+
+        // Start from today and count backwards
+        var streak = 0
+        var currentDate = calendar.startOfDay(for: Date())
+
+        while checkInDates.contains(currentDate) {
+            streak += 1
+            guard let previousDay = calendar.date(byAdding: .day, value: -1, to: currentDate) else { break }
+            currentDate = previousDay
+        }
+
+        print("🔥 [Dashboard] Current streak calculated: \(streak) days")
+        return streak
     }
 
-    /// Generate mock data for initial development
-    private func generateMockData() {
-        print("🎨 [Dashboard] Generating mock data...")
+    /// Calculate longest streak ever
+    private func calculateLongestStreak(from checkIns: [SupabaseService.CheckIn]) -> Int {
+        print("🏆 [Dashboard] Calculating longest streak...")
 
-        // Mock breakup date (12 days ago)
-        breakupDate = Calendar.current.date(byAdding: .day, value: -12, to: Date())!
-        totalDaysNoContact = 12
-        currentStreak = 12
-        personalBestStreak = 15
-        daysUsingApp = 18
-        hasLoggedToday = false
+        let calendar = Calendar.current
+        let dateFormatter = ISO8601DateFormatter()
 
-        generateMockHeatmap()
-        generateMonthLabels()
+        // Parse and sort check-in dates
+        var checkInDates: [Date] = []
+        for checkIn in checkIns where checkIn.type == "success" {
+            if let date = dateFormatter.date(from: checkIn.date) {
+                if let startOfDay = calendar.date(from: calendar.dateComponents([.year, .month, .day], from: date)) {
+                    checkInDates.append(startOfDay)
+                }
+            }
+        }
 
-        print("✅ [Dashboard] Mock data generated")
-    }
+        // Remove duplicates and sort
+        checkInDates = Array(Set(checkInDates)).sorted()
 
-    /// Generate mock heatmap data for last 90 days
-    private func generateMockHeatmap() {
-        print("🎨 [Dashboard] Generating mock heatmap (90 days)...")
+        guard !checkInDates.isEmpty else {
+            print("🏆 [Dashboard] No check-ins found, longest streak: 0")
+            return 0
+        }
 
-        heatmapData = (0..<91).map { index in
-            let daysFromToday = 90 - index
+        var longestStreak = 1
+        var currentStreakLength = 1
 
-            if daysFromToday < 0 {
-                // Future days (should not happen with 91 days starting from today)
-                return .future
-            } else if daysFromToday > totalDaysNoContact {
-                // Before breakup - mark as missed (dark)
-                return .missed
+        for i in 1..<checkInDates.count {
+            let previousDate = checkInDates[i - 1]
+            let currentDate = checkInDates[i]
+
+            // Check if dates are consecutive
+            if let nextDay = calendar.date(byAdding: .day, value: 1, to: previousDate),
+               calendar.isDate(nextDay, inSameDayAs: currentDate) {
+                currentStreakLength += 1
+                longestStreak = max(longestStreak, currentStreakLength)
             } else {
-                // After breakup - randomly mark as logged or missed (mock data)
-                return Double.random(in: 0...1) > 0.3 ? .logged : .missed
+                currentStreakLength = 1
             }
         }
 
-        print("✅ [Dashboard] Generated \(heatmapData.count) heatmap cells")
+        print("🏆 [Dashboard] Longest streak calculated: \(longestStreak) days")
+        return longestStreak
+    }
+
+    /// Generate heatmap from real check-ins data
+    private func generateHeatmapFromCheckIns(_ checkIns: [SupabaseService.CheckIn]) {
+        print("🗓️ [Dashboard] Generating heatmap from check-ins...")
+
+        let calendar = Calendar.current
+        let dateFormatter = ISO8601DateFormatter()
+
+        // Parse all check-in dates into a set for fast lookup
+        var checkInDates: Set<Date> = []
+        for checkIn in checkIns where checkIn.type == "success" {
+            if let date = dateFormatter.date(from: checkIn.date) {
+                if let startOfDay = calendar.date(from: calendar.dateComponents([.year, .month, .day], from: date)) {
+                    checkInDates.insert(startOfDay)
+                }
+            }
+        }
+
+        // Generate 91 days of heatmap data (13 weeks)
+        let today = calendar.startOfDay(for: Date())
+        heatmapData = (0..<91).map { index in
+            let daysAgo = 90 - index
+            guard let date = calendar.date(byAdding: .day, value: -daysAgo, to: today) else {
+                return .missed
+            }
+
+            // Check if this date has a check-in
+            return checkInDates.contains(date) ? .logged : .missed
+        }
+
+        let loggedCount = heatmapData.filter { $0 == .logged }.count
+        print("🗓️ [Dashboard] Heatmap generated: \(loggedCount) logged days out of 91")
     }
 
     /// Generate month labels for heatmap (last 3 months)

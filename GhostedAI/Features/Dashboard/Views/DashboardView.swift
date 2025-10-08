@@ -11,6 +11,7 @@ struct DashboardView: View {
     @State private var timeUntilNextCheckIn = ""
     @State private var hasAppeared = false
     @State private var isPressed = false
+    @State private var isPulsing = false
 
     var body: some View {
         ZStack {
@@ -21,16 +22,9 @@ struct DashboardView: View {
             // Layer 1: Main Content
             ScrollView(showsIndicators: false) {
                 VStack(spacing: 0) {
-                    // Header Section
-                    headerSection
-                        .padding(.top, 16)
-                        .opacity(hasAppeared ? 1 : 0)
-                        .offset(y: hasAppeared ? 0 : 20)
-                        .animation(.spring(response: 0.6, dampingFraction: 0.8), value: hasAppeared)
-
-                    // Welcome Section
+                    // Welcome Section (starts from top, no header)
                     welcomeSection
-                        .padding(.top, 32)
+                        .padding(.top, 48)
 
                     // Hero Card - Total Days
                     totalDaysCard
@@ -41,21 +35,19 @@ struct DashboardView: View {
 
                     // Dual Streak Cards
                     streakCardsSection
-                        .padding(.top, 28)
+                        .padding(.top, 20)
                         .opacity(hasAppeared ? 1 : 0)
-                        .offset(y: hasAppeared ? 0 : 20)
-                        .animation(.spring(response: 0.6, dampingFraction: 0.8).delay(0.1), value: hasAppeared)
+                        .animation(.easeIn(duration: 0.3), value: hasAppeared)
 
                     // Progress Chart
                     progressChartCard
-                        .padding(.top, 32)
+                        .padding(.top, 24)
                         .opacity(hasAppeared ? 1 : 0)
-                        .offset(y: hasAppeared ? 0 : 20)
-                        .animation(.spring(response: 0.6, dampingFraction: 0.8).delay(0.2), value: hasAppeared)
+                        .animation(.easeIn(duration: 0.3), value: hasAppeared)
 
                     // Milestones Section
                     milestonesSection
-                        .padding(.top, 28)
+                        .padding(.top, 24)
                         .opacity(hasAppeared ? 1 : 0)
                         .offset(y: hasAppeared ? 0 : 20)
                         .animation(.spring(response: 0.6, dampingFraction: 0.8).delay(0.3), value: hasAppeared)
@@ -66,15 +58,11 @@ struct DashboardView: View {
                 .padding(.horizontal, 20)
             }
 
-            // Layer 2: Floating Check-In Button
+            // Layer 2: Full-Width Check-In Button
             VStack {
                 Spacer()
-                HStack {
-                    Spacer()
-                    checkInButton
-                        .padding(.trailing, 20)
-                        .padding(.bottom, 100)
-                }
+                checkInButton
+                    .padding(.bottom, 16)
             }
 
             // Layer 3: Modals
@@ -107,6 +95,7 @@ struct DashboardView: View {
         }
         .onAppear {
             hasAppeared = true
+            isPulsing = true
         }
         .task {
             print("📊 Dashboard loading...")
@@ -120,44 +109,6 @@ struct DashboardView: View {
 
             let achievedCount = allMilestones.filter { viewModel.totalDaysNoContact >= $0.days }.count
             print("🏆 Milestones: \(achievedCount) unlocked")
-        }
-    }
-
-    // MARK: - Header Section
-
-    private var headerSection: some View {
-        HStack {
-            // App branding - premium sizing
-            Text("GhostedAI")
-                .font(.system(size: 32, weight: .bold))
-                .kerning(-0.5)
-                .foregroundColor(.white)
-
-            Spacer()
-
-            // Streak button - pill shape with glow
-            Button(action: {
-                showStreakAlert()
-            }) {
-                HStack(spacing: 6) {
-                    Text("🔥")
-                        .font(.system(size: 16))
-                    Text("\(viewModel.currentStreak)")
-                        .font(.system(size: 16, weight: .semibold))
-                        .foregroundColor(.white)
-                }
-                .padding(.horizontal, 16)
-                .frame(height: 44)
-                .background(
-                    LinearGradient(
-                        colors: [Color(hex: 0xFF6B35), Color(hex: 0xFF8E53)],
-                        startPoint: .leading,
-                        endPoint: .trailing
-                    )
-                )
-                .cornerRadius(22)
-                .shadow(color: Color(hex: 0xFF6B35).opacity(0.3), radius: 8, x: 0, y: 2)
-            }
         }
     }
 
@@ -177,40 +128,31 @@ struct DashboardView: View {
         .frame(maxWidth: .infinity, alignment: .leading)
     }
 
-    // MARK: - Total Days Card (Hero - Premium)
+    // MARK: - Total Days Card (Hero - Minimal Clean)
 
     private var totalDaysCard: some View {
-        VStack(spacing: 24) {
-            // Number and "days" text
-            HStack(alignment: .lastTextBaseline, spacing: 8) {
-                Text("\(viewModel.totalDaysNoContact)")
-                    .font(.system(size: 80, weight: .bold))
-                    .foregroundStyle(
-                        LinearGradient(
-                            colors: [Color(hex: 0xFF6B35), Color(hex: 0xFF8E53)],
-                            startPoint: .topLeading,
-                            endPoint: .bottomTrailing
-                        )
-                    )
-                    .shadow(color: Color(hex: 0xFF6B35).opacity(0.5), radius: 20, x: 0, y: 8)
+        VStack(spacing: 12) {
+            // Top label
+            Text("Total Days No-Contact")
+                .font(.system(size: 15, weight: .medium))
+                .foregroundColor(Color(hex: 0x8E8E93))
 
-                Text("days")
-                    .font(.system(size: 36, weight: .regular))
-                    .foregroundColor(Color(hex: 0xFF8E53))
-                    .opacity(0.6)
-            }
+            // Main number (ONLY number, no "days")
+            Text("\(viewModel.totalDaysNoContact)")
+                .font(.system(size: 96, weight: .bold))
+                .foregroundColor(Color(hex: 0xFF6B35))
 
-            // Progress bar - FIXED with proper ZStack
+            // Progress bar section
             VStack(spacing: 8) {
                 GeometryReader { geometry in
                     ZStack(alignment: .leading) {
                         // Background track (FULL WIDTH - always visible)
-                        RoundedRectangle(cornerRadius: 3)
-                            .fill(Color(hex: 0x2A2A2A))
-                            .frame(height: 6)
+                        RoundedRectangle(cornerRadius: 4)
+                            .fill(Color(hex: 0x2C2C2E))
+                            .frame(height: 8)
 
                         // Progress fill (PERCENTAGE of width)
-                        RoundedRectangle(cornerRadius: 3)
+                        RoundedRectangle(cornerRadius: 4)
                             .fill(
                                 LinearGradient(
                                     colors: [Color(hex: 0xFF6B35), Color(hex: 0xFF8E53)],
@@ -218,96 +160,72 @@ struct DashboardView: View {
                                     endPoint: .trailing
                                 )
                             )
-                            .frame(width: geometry.size.width * progressToNextMilestone, height: 6)
+                            .frame(width: geometry.size.width * progressToNextMilestone, height: 8)
                             .animation(.easeOut(duration: 1.2), value: progressToNextMilestone)
                     }
                 }
-                .frame(height: 6)
+                .frame(height: 8)
                 .frame(maxWidth: .infinity)
 
-                // Subtitle
-                Text(milestoneSubtitle)
+                // Bottom text
+                Text("Next milestone: \(Int(nextMilestone)) days")
                     .font(.system(size: 13, weight: .regular))
-                    .foregroundColor(Color(hex: 0x999999))
+                    .foregroundColor(Color(hex: 0x8E8E93))
                     .frame(maxWidth: .infinity, alignment: .trailing)
             }
+            .padding(.top, 12)
         }
-        .padding(32)
-        .background(
-            LinearGradient(
-                colors: [Color(hex: 0x1E1E1E), Color(hex: 0x0A0A0A)],
-                startPoint: .top,
-                endPoint: .bottom
-            )
-        )
-        .cornerRadius(24)
+        .padding(.vertical, 32)
+        .padding(.horizontal, 24)
+        .background(Color(hex: 0x1C1C1E))
+        .cornerRadius(20)
         .overlay(
-            RoundedRectangle(cornerRadius: 24)
-                .stroke(Color.white.opacity(0.08), lineWidth: 1)
+            RoundedRectangle(cornerRadius: 20)
+                .stroke(Color.white.opacity(0.03), lineWidth: 1)
         )
-        .shadow(color: Color.black.opacity(0.6), radius: 24, x: 0, y: 8)
-        .shadow(color: Color(hex: 0xFF6B35).opacity(0.15), radius: 16, x: 0, y: 4)
     }
 
-    // MARK: - Streak Cards Section (Unified Premium)
+    // MARK: - Streak Cards Section (Minimal Clean)
 
     private var streakCardsSection: some View {
         HStack(spacing: 16) {
-            // Current Streak Card
-            VStack(spacing: 8) {
-                Text("🔥")
-                    .font(.system(size: 48))
-                    .shadow(color: Color(hex: 0xFF6B35).opacity(0.4), radius: 8, x: 0, y: 0)
-
-                Text("Current streak")
-                    .font(.system(size: 14, weight: .regular))
-                    .foregroundColor(Color(hex: 0x999999))
+            // Current Streak Card - minimal, no icons
+            VStack(alignment: .leading, spacing: 12) {
+                Text("Current Streak")
+                    .font(.system(size: 14, weight: .medium))
+                    .foregroundColor(Color(hex: 0x8E8E93))
 
                 Text("\(viewModel.currentStreak) days")
                     .font(.system(size: 32, weight: .bold))
-                    .foregroundStyle(
-                        LinearGradient(
-                            colors: [Color(hex: 0xFF6B35), Color(hex: 0xFF8E53)],
-                            startPoint: .topLeading,
-                            endPoint: .bottomTrailing
-                        )
-                    )
-                    .shadow(color: Color(hex: 0xFF6B35).opacity(0.3), radius: 8, x: 0, y: 2)
+                    .foregroundColor(.white)
             }
-            .frame(maxWidth: .infinity)
-            .padding(28)
-            .background(Color(hex: 0x1A1A1A))
-            .cornerRadius(20)
+            .frame(maxWidth: .infinity, alignment: .leading)
+            .padding(24)
+            .background(Color(hex: 0x1C1C1E))
+            .cornerRadius(16)
             .overlay(
-                RoundedRectangle(cornerRadius: 20)
-                    .stroke(Color.white.opacity(0.05), lineWidth: 1)
+                RoundedRectangle(cornerRadius: 16)
+                    .stroke(Color.white.opacity(0.03), lineWidth: 1)
             )
-            .shadow(color: Color.black.opacity(0.4), radius: 12, x: 0, y: 4)
 
-            // Best Streak Card
-            VStack(spacing: 8) {
-                Text("🏆")
-                    .font(.system(size: 48))
-                    .shadow(color: Color(hex: 0xFFD700).opacity(0.4), radius: 8, x: 0, y: 0)
-
-                Text("Best streak")
-                    .font(.system(size: 14, weight: .regular))
-                    .foregroundColor(Color(hex: 0x999999))
+            // Longest Streak Card - minimal, no icons
+            VStack(alignment: .leading, spacing: 12) {
+                Text("Longest Streak")
+                    .font(.system(size: 14, weight: .medium))
+                    .foregroundColor(Color(hex: 0x8E8E93))
 
                 Text("\(viewModel.personalBestStreak) days")
                     .font(.system(size: 32, weight: .bold))
                     .foregroundColor(.white)
-                    .shadow(color: Color.white.opacity(0.2), radius: 8, x: 0, y: 2)
             }
-            .frame(maxWidth: .infinity)
-            .padding(28)
-            .background(Color(hex: 0x1A1A1A))
-            .cornerRadius(20)
+            .frame(maxWidth: .infinity, alignment: .leading)
+            .padding(24)
+            .background(Color(hex: 0x1C1C1E))
+            .cornerRadius(16)
             .overlay(
-                RoundedRectangle(cornerRadius: 20)
-                    .stroke(Color.white.opacity(0.05), lineWidth: 1)
+                RoundedRectangle(cornerRadius: 16)
+                    .stroke(Color.white.opacity(0.03), lineWidth: 1)
             )
-            .shadow(color: Color.black.opacity(0.4), radius: 12, x: 0, y: 4)
         }
     }
 
@@ -431,13 +349,14 @@ struct DashboardView: View {
         }
     }
 
-    // MARK: - Milestones Section (Premium)
+    // MARK: - Milestones Section (3 Badges with View All)
 
     private var milestonesSection: some View {
         VStack(alignment: .leading, spacing: 16) {
+            // Section header with View All button
             HStack {
                 Text("Milestones")
-                    .font(.system(size: 22, weight: .semibold))
+                    .font(.system(size: 20, weight: .semibold))
                     .foregroundColor(.white)
 
                 Spacer()
@@ -450,52 +369,130 @@ struct DashboardView: View {
                         .foregroundColor(Color(hex: 0xFF6B35))
                 }
             }
+            .padding(.horizontal, 20)
 
-            // Preview milestones
-            HStack(spacing: 20) {
-                ForEach(previewMilestones, id: \.days) { milestone in
-                    milestoneIcon(milestone: milestone)
+            // Show 3 milestones horizontally
+            HStack(spacing: 16) {
+                ForEach(Array(threeMilestones.prefix(3)), id: \.days) { milestone in
+                    progressRingMilestone(milestone: milestone)
                 }
             }
         }
     }
 
-    private func milestoneIcon(milestone: Milestone) -> some View {
-        let achieved = viewModel.totalDaysNoContact >= milestone.days
+    private func progressRingMilestone(milestone: Milestone) -> some View {
+        let current = Double(viewModel.totalDaysNoContact)
+        let currentStreak = Double(viewModel.currentStreak)
+        let target = Double(milestone.days)
+
+        // Use streak progress for streak milestones, total days for others
+        let relevantValue = milestone.isStreak ? currentStreak : current
+        let progress = min(relevantValue / target, 1.0)
+        let isCompleted = relevantValue >= target
+        let isLocked = relevantValue == 0
 
         return VStack(spacing: 12) {
+            // Progress ring (100x100pt)
             ZStack {
-                if achieved {
-                    // Achieved: Filled with glow
-                    Circle()
-                        .fill(Color(hex: 0xFF6B35))
-                        .frame(width: 100, height: 100)
-                        .shadow(color: Color(hex: 0xFF6B35).opacity(0.5), radius: 12, x: 0, y: 4)
-                } else {
-                    // Not achieved: Outline only
-                    Circle()
-                        .strokeBorder(Color(hex: 0x333333), lineWidth: 2)
-                        .frame(width: 100, height: 100)
-                        .opacity(0.4)
-                }
+                // Background ring (gray, full circle)
+                Circle()
+                    .stroke(Color(hex: 0x2C2C2E), lineWidth: 8)
+                    .frame(width: 100, height: 100)
 
-                VStack(spacing: 4) {
-                    Text(milestone.isStreak ? "🔥" : "⭐")
-                        .font(.system(size: 40))
+                // Progress ring (orange, partial or full)
+                Circle()
+                    .trim(from: 0, to: progress)
+                    .stroke(
+                        LinearGradient(
+                            colors: [Color(hex: 0xFF6B35), Color(hex: 0xFF8E53)],
+                            startPoint: .top,
+                            endPoint: .bottom
+                        ),
+                        style: StrokeStyle(lineWidth: 8, lineCap: .round)
+                    )
+                    .frame(width: 100, height: 100)
+                    .rotationEffect(.degrees(-90))
+                    .animation(.easeOut(duration: 1.5), value: progress)
 
-                    Text("\(milestone.days)")
-                        .font(.system(size: 32, weight: .bold))
-                        .foregroundColor(achieved ? .white : Color(hex: 0x666666))
-                }
+                // Icon/emoji in center
+                Text(milestoneEmoji(for: milestone, completed: isCompleted))
+                    .font(.system(size: 40))
+                    .opacity(isLocked ? 0.4 : 1.0)
             }
 
-            Text("\(milestone.days) \(milestone.isStreak ? "day streak" : "days")")
-                .font(.system(size: 14, weight: .regular))
-                .foregroundColor(Color(hex: 0x999999))
+            // Label below ring (differentiate types)
+            Text(milestone.isStreak ? "\(milestone.days) day streak" : "\(milestone.days) days")
+                .font(.system(size: 16, weight: .medium))
+                .foregroundColor(isCompleted ? .white : Color(hex: 0x8E8E93))
+                .multilineTextAlignment(.center)
+
+            // Status below label
+            if !milestoneStatus(for: milestone, progress: progress).isEmpty {
+                Text(milestoneStatus(for: milestone, progress: progress))
+                    .font(.system(size: 14, weight: .regular))
+                    .foregroundColor(statusColor(for: milestone, completed: isCompleted))
+            }
+        }
+        .frame(maxWidth: .infinity)
+    }
+
+    private func milestoneEmoji(for milestone: Milestone, completed: Bool) -> String {
+        if completed {
+            return "🎉"
+        } else if milestone.days == 7 {
+            return "🏆"
+        } else if milestone.days == 30 {
+            return "⭐"
+        } else {
+            return "🎯"
         }
     }
 
-    // MARK: - Check-In Button (Floating Premium)
+    private func milestoneStatus(for milestone: Milestone, progress: Double) -> String {
+        let current = viewModel.totalDaysNoContact
+        let target = milestone.days
+
+        if current >= target {
+            return "Completed"
+        } else if current > 0 {
+            return "In Progress"
+        } else {
+            return ""
+        }
+    }
+
+    private func statusColor(for milestone: Milestone, completed: Bool) -> Color {
+        let current = viewModel.totalDaysNoContact
+
+        if completed {
+            return Color(hex: 0x8E8E93)
+        } else if current > 0 {
+            return Color(hex: 0xFF6B35)
+        } else {
+            return Color(hex: 0x8E8E93)
+        }
+    }
+
+    private var threeMilestones: [Milestone] {
+        let all = allMilestones
+        let achieved = all.filter { milestone in
+            let relevantValue = milestone.isStreak ? viewModel.currentStreak : viewModel.totalDaysNoContact
+            return relevantValue >= milestone.days
+        }
+        let upcoming = all.filter { milestone in
+            let relevantValue = milestone.isStreak ? viewModel.currentStreak : viewModel.totalDaysNoContact
+            return relevantValue < milestone.days
+        }
+
+        if achieved.count >= 3 {
+            return Array(achieved.suffix(3))
+        } else {
+            let neededUpcoming = 3 - achieved.count
+            return achieved + Array(upcoming.prefix(neededUpcoming))
+        }
+    }
+
+    // MARK: - Check-In Button (Glass Effect with Pulse)
 
     private var checkInButton: some View {
         Button(action: {
@@ -505,46 +502,43 @@ struct DashboardView: View {
                 showCheckInModal = true
             }
         }) {
-            Text(buttonText)
-                .font(.system(size: 18, weight: .bold))
-                .foregroundColor(.white)
-                .frame(width: 120, height: 56)
-                .background(
-                    buttonBackground
-                )
-                .cornerRadius(28)
-                .overlay(
-                    RoundedRectangle(cornerRadius: 28)
-                        .stroke(Color.white.opacity(0.2), lineWidth: 2)
-                )
-                .shadow(color: viewModel.hasLoggedToday ? Color.black.opacity(0.3) : Color(hex: 0xFF6B35).opacity(0.6), radius: viewModel.hasLoggedToday ? 8 : 20, x: 0, y: viewModel.hasLoggedToday ? 2 : 8)
-                .shadow(color: Color.black.opacity(0.4), radius: 12, x: 0, y: 4)
-        }
-        .scaleEffect(isPressed ? 0.95 : 1.0)
-        .animation(.spring(response: 0.3, dampingFraction: 0.6), value: isPressed)
-        .disabled(viewModel.hasLoggedToday)
-    }
+            ZStack {
+                // Base layer (dark background)
+                RoundedRectangle(cornerRadius: 16)
+                    .fill(Color(hex: 0x1C1C1E).opacity(0.8))
 
-    private var buttonText: String {
-        if viewModel.hasLoggedToday {
-            return "Next:\n\(timeUntilNextCheckIn)"
-        } else {
-            return "Check In"
-        }
-    }
+                // Glass overlay (subtle shine)
+                RoundedRectangle(cornerRadius: 16)
+                    .fill(
+                        LinearGradient(
+                            colors: [
+                                Color.white.opacity(0.08),
+                                Color.white.opacity(0.02)
+                            ],
+                            startPoint: .top,
+                            endPoint: .bottom
+                        )
+                    )
 
-    private var buttonBackground: some View {
-        Group {
-            if viewModel.hasLoggedToday {
-                Color(hex: 0x333333)
-            } else {
-                LinearGradient(
-                    colors: [Color(hex: 0xFF6B35), Color(hex: 0xFF8E53)],
-                    startPoint: .leading,
-                    endPoint: .trailing
-                )
+                // Text
+                Text(viewModel.hasLoggedToday ? "Great work, see you tomorrow!" : "Check in today")
+                    .font(.system(size: 18, weight: viewModel.hasLoggedToday ? .regular : .semibold))
+                    .foregroundColor(.white)
             }
+            .frame(height: 56)
+            .overlay(
+                RoundedRectangle(cornerRadius: 16)
+                    .stroke(Color.white.opacity(viewModel.hasLoggedToday ? 0.08 : 0.15), lineWidth: 1)
+            )
         }
+        .opacity(viewModel.hasLoggedToday ? 0.6 : 1.0)
+        .scaleEffect(viewModel.hasLoggedToday ? 1.0 : (isPulsing ? 1.02 : 1.0))
+        .animation(
+            viewModel.hasLoggedToday ? .none : Animation.easeInOut(duration: 2.0).repeatForever(autoreverses: true),
+            value: isPulsing
+        )
+        .disabled(viewModel.hasLoggedToday)
+        .padding(.horizontal, 16)
     }
 
     // MARK: - Check-In Modal (Premium)
@@ -745,7 +739,7 @@ struct DashboardView: View {
                         GridItem(.flexible())
                     ], spacing: 20) {
                         ForEach(allMilestones, id: \.days) { milestone in
-                            milestoneIcon(milestone: milestone)
+                            progressRingMilestone(milestone: milestone)
                         }
                     }
                     .padding(24)
@@ -756,20 +750,6 @@ struct DashboardView: View {
     }
 
     // MARK: - Helper Functions
-
-    private func showStreakAlert() {
-        let alert = UIAlertController(
-            title: "Current Streak",
-            message: "\(viewModel.currentStreak) days",
-            preferredStyle: .alert
-        )
-        alert.addAction(UIAlertAction(title: "OK", style: .default))
-
-        if let windowScene = UIApplication.shared.connectedScenes.first as? UIWindowScene,
-           let rootViewController = windowScene.windows.first?.rootViewController {
-            rootViewController.present(alert, animated: true)
-        }
-    }
 
     private func handleCheckInSuccess() {
         print("✅ Check-in logged: success")

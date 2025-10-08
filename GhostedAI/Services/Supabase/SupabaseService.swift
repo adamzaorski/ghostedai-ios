@@ -51,6 +51,27 @@ final class SupabaseService {
         let answers: Data
     }
 
+    /// Check-in record from database
+    struct CheckIn: Decodable {
+        let id: String
+        let userId: String
+        let date: String
+        let type: String  // "success" or "slip"
+        let mood: String?
+        let journal: String?
+        let createdAt: String
+
+        enum CodingKeys: String, CodingKey {
+            case id
+            case userId = "user_id"
+            case date
+            case type
+            case mood
+            case journal
+            case createdAt = "created_at"
+        }
+    }
+
     // MARK: - Singleton
 
     static let shared = SupabaseService()
@@ -291,6 +312,33 @@ final class SupabaseService {
         } catch {
             // Not found is okay, return nil
             return nil
+        }
+    }
+
+    // MARK: - Check-ins Data
+
+    /// Retrieve all check-ins for a user
+    /// - Parameter userId: User's unique ID
+    /// - Returns: Array of check-in records
+    /// - Throws: SupabaseError if retrieval fails
+    func getCheckIns(userId: UUID) async throws -> [CheckIn] {
+        print("🔍 [SupabaseService] Fetching check-ins for user_id: \(userId)")
+
+        do {
+            let response: [CheckIn] = try await client
+                .from("check_ins")
+                .select()
+                .eq("user_id", value: userId.uuidString)
+                .order("date", ascending: false)
+                .execute()
+                .value
+
+            print("✅ [SupabaseService] Fetched \(response.count) check-ins from database")
+            return response
+        } catch {
+            print("❌ [SupabaseService] Failed to fetch check-ins: \(error.localizedDescription)")
+            // Return empty array instead of throwing - no check-ins is a valid state
+            return []
         }
     }
 
