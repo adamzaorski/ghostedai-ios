@@ -95,7 +95,6 @@ struct DashboardView: View {
         }
         .onAppear {
             hasAppeared = true
-            isPulsing = true
         }
         .task {
             print("📊 Dashboard loading...")
@@ -479,12 +478,24 @@ struct DashboardView: View {
         }
         .opacity(viewModel.hasLoggedToday ? 0.6 : 1.0)
         .scaleEffect(viewModel.hasLoggedToday ? 1.0 : (isPulsing ? 1.02 : 1.0))
-        .animation(
-            viewModel.hasLoggedToday ? .none : Animation.easeInOut(duration: 2.0).repeatForever(autoreverses: true),
-            value: isPulsing
-        )
         .disabled(viewModel.hasLoggedToday)
         .padding(.horizontal, 16)
+        .onAppear {
+            // Start pulsing animation only if not logged today
+            if !viewModel.hasLoggedToday {
+                withAnimation(Animation.easeInOut(duration: 2.0).repeatForever(autoreverses: true)) {
+                    isPulsing = true
+                }
+            }
+        }
+        .onChange(of: viewModel.hasLoggedToday) { oldValue, newValue in
+            // Stop pulsing when user logs in
+            if newValue {
+                withAnimation(.none) {
+                    isPulsing = false
+                }
+            }
+        }
     }
 
     // MARK: - Check-In Modal (Premium)

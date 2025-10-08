@@ -95,10 +95,19 @@ class DashboardViewModel: ObservableObject {
                 personalBestStreak = calculateLongestStreak(from: checkIns)
                 print("📊 [Dashboard] Personal best streak: \(personalBestStreak) days")
 
-                // Check if logged today
-                let today = ISO8601DateFormatter().string(from: Date()).prefix(10) // YYYY-MM-DD
-                hasLoggedToday = checkIns.contains { $0.date.starts(with: today) }
-                print("📊 [Dashboard] Has logged today: \(hasLoggedToday)")
+                // Check if logged today - use proper date comparison
+                let calendar = Calendar.current
+                let today = calendar.startOfDay(for: Date())
+                let dateFormatter = ISO8601DateFormatter()
+
+                hasLoggedToday = checkIns.contains { checkIn in
+                    if let checkInDate = dateFormatter.date(from: checkIn.date),
+                       let checkInStartOfDay = calendar.date(from: calendar.dateComponents([.year, .month, .day], from: checkInDate)) {
+                        return calendar.isDate(checkInStartOfDay, inSameDayAs: today)
+                    }
+                    return false
+                }
+                print("📊 [Dashboard] Has logged today: \(hasLoggedToday) (using Calendar comparison)")
 
                 // Generate heatmap from real data
                 generateHeatmapFromCheckIns(checkIns)
@@ -202,26 +211,56 @@ class DashboardViewModel: ObservableObject {
 
         let calendar = Calendar.current
         let dateFormatter = ISO8601DateFormatter()
+        let today = calendar.startOfDay(for: Date())
+
+        print("   Today (normalized): \(today)")
+        print("   Total check-ins to process: \(checkIns.count)")
 
         // Parse all check-in dates
         var checkInDates: Set<Date> = []
         for checkIn in checkIns where checkIn.type == "success" {
+            print("   Processing check-in: date=\(checkIn.date), type=\(checkIn.type)")
+
             if let date = dateFormatter.date(from: checkIn.date) {
                 // Normalize to start of day
                 if let startOfDay = calendar.date(from: calendar.dateComponents([.year, .month, .day], from: date)) {
                     checkInDates.insert(startOfDay)
+                    print("     ✅ Parsed and normalized to: \(startOfDay)")
+
+                    // Check if it's today
+                    if calendar.isDate(startOfDay, inSameDayAs: today) {
+                        print("     🎯 This is TODAY!")
+                    }
+                } else {
+                    print("     ❌ Failed to normalize date")
                 }
+            } else {
+                print("     ❌ Failed to parse date string: \(checkIn.date)")
             }
         }
 
+        print("   Unique check-in dates: \(checkInDates.count)")
+        print("   Dates: \(checkInDates.sorted())")
+
         // Start from today and count backwards
         var streak = 0
-        var currentDate = calendar.startOfDay(for: Date())
+        var currentDate = today
 
-        while checkInDates.contains(currentDate) {
-            streak += 1
-            guard let previousDay = calendar.date(byAdding: .day, value: -1, to: currentDate) else { break }
-            currentDate = previousDay
+        print("   Starting streak count from today...")
+        for dayOffset in 0..<365 {
+            if checkInDates.contains(currentDate) {
+                streak += 1
+                print("   Day -\(dayOffset) (\(currentDate)): ✅ Check-in exists - Streak: \(streak)")
+
+                guard let previousDay = calendar.date(byAdding: .day, value: -1, to: currentDate) else {
+                    print("   ⚠️ Cannot calculate previous day")
+                    break
+                }
+                currentDate = previousDay
+            } else {
+                print("   Day -\(dayOffset) (\(currentDate)): ❌ No check-in - Streak broken")
+                break
+            }
         }
 
         print("🔥 [Dashboard] Current streak calculated: \(streak) days")
@@ -280,6 +319,10 @@ class DashboardViewModel: ObservableObject {
 
         let calendar = Calendar.current
         let dateFormatter = ISO8601DateFormatter()
+        let today = calendar.startOfDay(for: Date())
+
+        print("   Today (normalized): \(today)")
+        print("   Check-ins to process: \(checkIns.count)")
 
         // Parse all check-in dates into a set for fast lookup
         var checkInDates: Set<Date> = []
@@ -287,12 +330,19 @@ class DashboardViewModel: ObservableObject {
             if let date = dateFormatter.date(from: checkIn.date) {
                 if let startOfDay = calendar.date(from: calendar.dateComponents([.year, .month, .day], from: date)) {
                     checkInDates.insert(startOfDay)
+                    print("   Added date to heatmap: \(startOfDay)")
+
+                    // Check if it's today
+                    if calendar.isDate(startOfDay, inSameDayAs: today) {
+                        print("     🎯 This is TODAY - should show in heatmap!")
+                    }
                 }
             }
         }
 
+        print("   Total unique dates for heatmap: \(checkInDates.count)")
+
         // Generate 91 days of heatmap data (13 weeks)
-        let today = calendar.startOfDay(for: Date())
         heatmapData = (0..<91).map { index in
             let daysAgo = 90 - index
             guard let date = calendar.date(byAdding: .day, value: -daysAgo, to: today) else {
@@ -300,11 +350,19 @@ class DashboardViewModel: ObservableObject {
             }
 
             // Check if this date has a check-in
-            return checkInDates.contains(date) ? .logged : .missed
+            let hasCheckIn = checkInDates.contains(date)
+
+            // Log today's cell specifically
+            if calendar.isDate(date, inSameDayAs: today) {
+                print("   Heatmap cell for TODAY (index \(index)): \(hasCheckIn ? "LOGGED ✅" : "MISSED ❌")")
+            }
+
+            return hasCheckIn ? .logged : .missed
         }
 
         let loggedCount = heatmapData.filter { $0 == .logged }.count
         print("🗓️ [Dashboard] Heatmap generated: \(loggedCount) logged days out of 91")
+        print("   Heatmap data array count: \(heatmapData.count)")
     }
 
     /// Generate month labels for heatmap (last 3 months)
