@@ -31,6 +31,29 @@ class DashboardViewModel: ObservableObject {
         generateMilestones()
     }
 
+    // MARK: - Helper Methods
+
+    /// Parse a check-in date string (handles both ISO8601 and YYYY-MM-DD formats)
+    private func parseCheckInDate(_ dateString: String) -> Date? {
+        // Try YYYY-MM-DD format first (new format)
+        let simpleDateFormatter = DateFormatter()
+        simpleDateFormatter.dateFormat = "yyyy-MM-dd"
+        simpleDateFormatter.calendar = Calendar.current
+        simpleDateFormatter.timeZone = TimeZone.current
+
+        if let date = simpleDateFormatter.date(from: dateString) {
+            return date
+        }
+
+        // Fall back to ISO8601 format (old format in database)
+        if let date = ISO8601DateFormatter().date(from: dateString) {
+            return date
+        }
+
+        print("⚠️ [Dashboard] Failed to parse date: \(dateString)")
+        return nil
+    }
+
     // MARK: - Data Loading
 
     /// Load all user data from Supabase
@@ -105,11 +128,10 @@ class DashboardViewModel: ObservableObject {
                 // Check if logged today - use proper date comparison
                 let calendar = Calendar.current
                 let today = calendar.startOfDay(for: Date())
-                let dateFormatter = ISO8601DateFormatter()
 
                 hasLoggedToday = checkIns.contains { checkIn in
-                    if let checkInDate = dateFormatter.date(from: checkIn.date),
-                       let checkInStartOfDay = calendar.date(from: calendar.dateComponents([.year, .month, .day], from: checkInDate)) {
+                    if let checkInDate = parseCheckInDate(checkIn.date) {
+                        let checkInStartOfDay = calendar.startOfDay(for: checkInDate)
                         let isToday = calendar.isDate(checkInStartOfDay, inSameDayAs: today)
                         if isToday {
                             print("📊 [Dashboard] Found check-in for TODAY: \(checkIn.date)")
@@ -229,7 +251,6 @@ class DashboardViewModel: ObservableObject {
         print("🔥 [Dashboard] Calculating current streak...")
 
         let calendar = Calendar.current
-        let dateFormatter = ISO8601DateFormatter()
         let today = calendar.startOfDay(for: Date())
 
         print("   Today (normalized): \(today)")
@@ -240,18 +261,14 @@ class DashboardViewModel: ObservableObject {
         for checkIn in checkIns where checkIn.type == "success" {
             print("   Processing check-in: date=\(checkIn.date), type=\(checkIn.type)")
 
-            if let date = dateFormatter.date(from: checkIn.date) {
-                // Normalize to start of day
-                if let startOfDay = calendar.date(from: calendar.dateComponents([.year, .month, .day], from: date)) {
-                    checkInDates.insert(startOfDay)
-                    print("     ✅ Parsed and normalized to: \(startOfDay)")
+            if let date = parseCheckInDate(checkIn.date) {
+                let startOfDay = calendar.startOfDay(for: date)
+                checkInDates.insert(startOfDay)
+                print("     ✅ Parsed and normalized to: \(startOfDay)")
 
-                    // Check if it's today
-                    if calendar.isDate(startOfDay, inSameDayAs: today) {
-                        print("     🎯 This is TODAY!")
-                    }
-                } else {
-                    print("     ❌ Failed to normalize date")
+                // Check if it's today
+                if calendar.isDate(startOfDay, inSameDayAs: today) {
+                    print("     🎯 This is TODAY!")
                 }
             } else {
                 print("     ❌ Failed to parse date string: \(checkIn.date)")
@@ -291,15 +308,13 @@ class DashboardViewModel: ObservableObject {
         print("🏆 [Dashboard] Calculating longest streak...")
 
         let calendar = Calendar.current
-        let dateFormatter = ISO8601DateFormatter()
 
         // Parse and sort check-in dates
         var checkInDates: [Date] = []
         for checkIn in checkIns where checkIn.type == "success" {
-            if let date = dateFormatter.date(from: checkIn.date) {
-                if let startOfDay = calendar.date(from: calendar.dateComponents([.year, .month, .day], from: date)) {
-                    checkInDates.append(startOfDay)
-                }
+            if let date = parseCheckInDate(checkIn.date) {
+                let startOfDay = calendar.startOfDay(for: date)
+                checkInDates.append(startOfDay)
             }
         }
 
@@ -337,7 +352,6 @@ class DashboardViewModel: ObservableObject {
         print("🗓️ [Dashboard] Generating heatmap from check-ins...")
 
         let calendar = Calendar.current
-        let dateFormatter = ISO8601DateFormatter()
         let today = calendar.startOfDay(for: Date())
 
         print("   Today (normalized): \(today)")
@@ -346,15 +360,14 @@ class DashboardViewModel: ObservableObject {
         // Parse all check-in dates into a set for fast lookup
         var checkInDates: Set<Date> = []
         for checkIn in checkIns where checkIn.type == "success" {
-            if let date = dateFormatter.date(from: checkIn.date) {
-                if let startOfDay = calendar.date(from: calendar.dateComponents([.year, .month, .day], from: date)) {
-                    checkInDates.insert(startOfDay)
-                    print("   Added date to heatmap: \(startOfDay)")
+            if let date = parseCheckInDate(checkIn.date) {
+                let startOfDay = calendar.startOfDay(for: date)
+                checkInDates.insert(startOfDay)
+                print("   Added date to heatmap: \(startOfDay)")
 
-                    // Check if it's today
-                    if calendar.isDate(startOfDay, inSameDayAs: today) {
-                        print("     🎯 This is TODAY - should show in heatmap!")
-                    }
+                // Check if it's today
+                if calendar.isDate(startOfDay, inSameDayAs: today) {
+                    print("     🎯 This is TODAY - should show in heatmap!")
                 }
             }
         }

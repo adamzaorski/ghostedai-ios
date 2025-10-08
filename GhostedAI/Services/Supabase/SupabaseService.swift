@@ -370,9 +370,15 @@ final class SupabaseService {
         // Normalize date to start of day for consistent comparison
         let calendar = Calendar.current
         let normalizedDate = calendar.startOfDay(for: date)
-        let dateString = ISO8601DateFormatter().string(from: normalizedDate)
 
-        print("   Normalized date: \(dateString)")
+        // Format as YYYY-MM-DD (date only, no time) to avoid timezone issues
+        let dateFormatter = DateFormatter()
+        dateFormatter.dateFormat = "yyyy-MM-dd"
+        dateFormatter.calendar = calendar
+        dateFormatter.timeZone = TimeZone.current
+        let dateString = dateFormatter.string(from: normalizedDate)
+
+        print("   Normalized date (local): \(dateString)")
 
         // Check if a check-in already exists for this date
         print("🔍 Checking for existing check-in on this date...")
