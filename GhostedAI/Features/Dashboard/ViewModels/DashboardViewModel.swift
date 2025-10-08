@@ -334,25 +334,90 @@ class DashboardViewModel: ObservableObject {
 
     // MARK: - Actions
 
-    /// Log today's no-contact day
+    /// Log today's no-contact day (success check-in)
     func logTodayNoContact() async {
-        print("✅ [Dashboard] Logging today's no-contact day...")
+        print("━━━━━━━━━━━━━━━━━━━━━━━━━━")
+        print("📥 CHECK-IN FLOW - SUCCESS")
+        print("━━━━━━━━━━━━━━━━━━━━━━━━━━")
+        print("1️⃣ User confirmed check-in (success)")
 
-        // TODO: Save to check_ins table in Supabase
-        // - Insert record with user_id, today's date, mood, journal
-        // - Update heatmap data
-        // - Update current streak
-        // - Check if new personal best
+        do {
+            // Get current user
+            guard let user = try await SupabaseService.shared.getCurrentUser() else {
+                print("❌ [Dashboard] No authenticated user found")
+                return
+            }
 
-        // For now, just update local state
-        hasLoggedToday = true
+            print("2️⃣ Saving check-in to database...")
 
-        // Update heatmap - mark today as logged (index 90 is today)
-        if heatmapData.count == 91 {
-            heatmapData[90] = .logged
+            // Save to Supabase
+            try await SupabaseService.shared.saveCheckIn(
+                userId: user.id,
+                date: Date(),
+                type: "success"
+            )
+
+            print("3️⃣ ✅ Check-in saved successfully!")
+            print("4️⃣ Reloading dashboard data to recalculate metrics...")
+
+            // CRITICAL: Reload ALL data from database to recalculate metrics
+            await loadUserData()
+
+            print("5️⃣ ✅ Metrics updated:")
+            print("   📊 Total days no-contact: \(totalDaysNoContact)")
+            print("   🔥 Current streak: \(currentStreak) days")
+            print("   🏆 Personal best streak: \(personalBestStreak) days")
+            print("   ✓ Has logged today: \(hasLoggedToday)")
+            print("6️⃣ UI updated")
+            print("━━━━━━━━━━━━━━━━━━━━━━━━━━")
+
+        } catch {
+            print("❌ [Dashboard] FATAL ERROR during check-in: \(error.localizedDescription)")
+            print("━━━━━━━━━━━━━━━━━━━━━━━━━━")
         }
+    }
 
-        print("✅ [Dashboard] Day logged! Total days: \(totalDaysNoContact + 1)")
+    /// Log today as a slip
+    func logTodaySlip() async {
+        print("━━━━━━━━━━━━━━━━━━━━━━━━━━")
+        print("📥 CHECK-IN FLOW - SLIP")
+        print("━━━━━━━━━━━━━━━━━━━━━━━━━━")
+        print("1️⃣ User logged slip")
+
+        do {
+            // Get current user
+            guard let user = try await SupabaseService.shared.getCurrentUser() else {
+                print("❌ [Dashboard] No authenticated user found")
+                return
+            }
+
+            print("2️⃣ Saving slip to database...")
+
+            // Save to Supabase
+            try await SupabaseService.shared.saveCheckIn(
+                userId: user.id,
+                date: Date(),
+                type: "slip"
+            )
+
+            print("3️⃣ ✅ Slip saved successfully!")
+            print("4️⃣ Reloading dashboard data to recalculate metrics...")
+
+            // CRITICAL: Reload ALL data from database to recalculate metrics
+            await loadUserData()
+
+            print("5️⃣ ✅ Metrics updated:")
+            print("   📊 Total days no-contact: \(totalDaysNoContact) (unchanged - slips don't count)")
+            print("   🔥 Current streak: \(currentStreak) days (reset to 0 if broken)")
+            print("   🏆 Personal best streak: \(personalBestStreak) days (kept)")
+            print("   ✓ Has logged today: \(hasLoggedToday)")
+            print("6️⃣ UI updated")
+            print("━━━━━━━━━━━━━━━━━━━━━━━━━━")
+
+        } catch {
+            print("❌ [Dashboard] FATAL ERROR during slip logging: \(error.localizedDescription)")
+            print("━━━━━━━━━━━━━━━━━━━━━━━━━━")
+        }
     }
 
     /// Refresh all data (pull-to-refresh)

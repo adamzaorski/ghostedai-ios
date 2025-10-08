@@ -764,6 +764,9 @@ struct DashboardView: View {
 
     private func handleCheckInSlip() {
         print("❌ Check-in logged: slip")
+        Task {
+            await viewModel.logTodaySlip()
+        }
         showToast("No worries, shit happens. Let's focus on the next day!")
         withAnimation(.easeOut(duration: 0.2)) {
             showCheckInModal = false

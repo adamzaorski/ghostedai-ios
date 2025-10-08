@@ -342,6 +342,73 @@ final class SupabaseService {
         }
     }
 
+    /// Save a new check-in to the database
+    /// - Parameters:
+    ///   - userId: User's unique ID
+    ///   - date: Date of the check-in
+    ///   - type: Type of check-in ("success" or "slip")
+    ///   - mood: Optional mood description
+    ///   - journal: Optional journal entry
+    /// - Throws: SupabaseError if save fails
+    func saveCheckIn(
+        userId: UUID,
+        date: Date,
+        type: String,
+        mood: String? = nil,
+        journal: String? = nil
+    ) async throws {
+        print("💾 [SupabaseService] Saving check-in...")
+        print("   User ID: \(userId)")
+        print("   Date: \(ISO8601DateFormatter().string(from: date))")
+        print("   Type: \(type)")
+        print("   Mood: \(mood ?? "nil")")
+
+        guard type == "success" || type == "slip" else {
+            throw SupabaseError.invalidData("Check-in type must be 'success' or 'slip'")
+        }
+
+        // Create check-in record
+        struct CheckInInsert: Encodable {
+            let userId: String
+            let date: String
+            let type: String
+            let mood: String?
+            let journal: String?
+            let createdAt: String
+
+            enum CodingKeys: String, CodingKey {
+                case userId = "user_id"
+                case date
+                case type
+                case mood
+                case journal
+                case createdAt = "created_at"
+            }
+        }
+
+        let checkIn = CheckInInsert(
+            userId: userId.uuidString,
+            date: ISO8601DateFormatter().string(from: date),
+            type: type,
+            mood: mood,
+            journal: journal,
+            createdAt: ISO8601DateFormatter().string(from: Date())
+        )
+
+        do {
+            let response = try await client
+                .from("check_ins")
+                .insert(checkIn)
+                .execute()
+
+            print("✅ [SupabaseService] Check-in saved successfully!")
+            print("   Response status: \(response.response.statusCode ?? 0)")
+        } catch {
+            print("❌ [SupabaseService] Failed to save check-in: \(error.localizedDescription)")
+            throw SupabaseError.databaseError("Failed to save check-in: \(error.localizedDescription)")
+        }
+    }
+
     // MARK: - User Data Management
 
     /// Update user profile with additional information
