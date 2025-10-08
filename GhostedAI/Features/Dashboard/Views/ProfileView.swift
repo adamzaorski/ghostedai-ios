@@ -362,6 +362,14 @@ struct ProfileView: View {
                 settingsRow(icon: "key.fill", label: "Change Password", value: "") {
                     showChangePassword = true
                 }
+
+                // DEBUG: Reset Check-ins
+                settingsRow(icon: "arrow.counterclockwise.circle.fill", label: "Reset Check-ins (DEBUG)", value: "", isDestructive: true) {
+                    Task {
+                        await viewModel.resetAllCheckIns()
+                    }
+                }
+
                 settingsRow(icon: "trash.fill", label: "Delete Account", value: "", isDestructive: true) {
                     showDeleteAccount = true
                 }

@@ -367,6 +367,31 @@ final class SupabaseService {
             throw SupabaseError.invalidData("Check-in type must be 'success' or 'slip'")
         }
 
+        // Normalize date to start of day for consistent comparison
+        let calendar = Calendar.current
+        let normalizedDate = calendar.startOfDay(for: date)
+        let dateString = ISO8601DateFormatter().string(from: normalizedDate)
+
+        print("   Normalized date: \(dateString)")
+
+        // Check if a check-in already exists for this date
+        print("🔍 Checking for existing check-in on this date...")
+        let existingCheckIns: [CheckIn] = try await client
+            .from("check_ins")
+            .select()
+            .eq("user_id", value: userId.uuidString)
+            .eq("date", value: dateString)
+            .execute()
+            .value
+
+        if !existingCheckIns.isEmpty {
+            print("⚠️ [SupabaseService] Check-in already exists for this date!")
+            print("   Existing check-in ID: \(existingCheckIns[0].id)")
+            throw SupabaseError.invalidData("You've already checked in today")
+        }
+
+        print("✅ No existing check-in found - proceeding with save")
+
         // Create check-in record
         struct CheckInInsert: Encodable {
             let userId: String
@@ -388,7 +413,7 @@ final class SupabaseService {
 
         let checkIn = CheckInInsert(
             userId: userId.uuidString,
-            date: ISO8601DateFormatter().string(from: date),
+            date: dateString,
             type: type,
             mood: mood,
             journal: journal,
@@ -406,6 +431,27 @@ final class SupabaseService {
         } catch {
             print("❌ [SupabaseService] Failed to save check-in: \(error.localizedDescription)")
             throw SupabaseError.databaseError("Failed to save check-in: \(error.localizedDescription)")
+        }
+    }
+
+    /// Delete all check-ins for a user (for testing/reset purposes)
+    /// - Parameter userId: User's unique ID
+    /// - Throws: SupabaseError if deletion fails
+    func deleteAllCheckIns(userId: UUID) async throws {
+        print("🗑️ [SupabaseService] Deleting all check-ins for user: \(userId)")
+
+        do {
+            let response = try await client
+                .from("check_ins")
+                .delete()
+                .eq("user_id", value: userId.uuidString)
+                .execute()
+
+            print("✅ [SupabaseService] All check-ins deleted successfully!")
+            print("   Response status: \(response.response.statusCode ?? 0)")
+        } catch {
+            print("❌ [SupabaseService] Failed to delete check-ins: \(error.localizedDescription)")
+            throw SupabaseError.databaseError("Failed to delete check-ins: \(error.localizedDescription)")
         }
     }
 

@@ -244,4 +244,22 @@ class ProfileViewModel: ObservableObject {
             }
         }
     }
+
+    /// DEBUG: Reset all check-ins for current user
+    func resetAllCheckIns() async {
+        print("🔄 [Profile] Resetting all check-ins...")
+
+        do {
+            guard let user = try await SupabaseService.shared.getCurrentUser() else {
+                print("❌ [Profile] No authenticated user")
+                return
+            }
+
+            try await SupabaseService.shared.deleteAllCheckIns(userId: user.id)
+            print("✅ [Profile] All check-ins deleted successfully")
+            print("ℹ️ [Profile] Dashboard will refresh when you return to it")
+        } catch {
+            print("❌ [Profile] Failed to reset check-ins: \(error.localizedDescription)")
+        }
+    }
 }
