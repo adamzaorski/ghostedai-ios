@@ -5,13 +5,13 @@ import Combine
 /// Chat message model
 struct ChatMessage: Identifiable, Codable {
     let id: UUID
-    let content: String
+    let text: String
     let isUser: Bool
     let timestamp: Date
 
-    init(id: UUID = UUID(), content: String, isUser: Bool, timestamp: Date = Date()) {
+    init(id: UUID = UUID(), text: String, isUser: Bool, timestamp: Date = Date()) {
         self.id = id
-        self.content = content
+        self.text = text
         self.isUser = isUser
         self.timestamp = timestamp
     }
@@ -60,7 +60,7 @@ class ChatViewModel: ObservableObject {
         print("💬 [Chat] User message sent: \(trimmedText)")
 
         // Add user message
-        let userMessage = ChatMessage(content: trimmedText, isUser: true)
+        let userMessage = ChatMessage(text: trimmedText, isUser: true)
         messages.append(userMessage)
 
         // Clear input
@@ -99,7 +99,7 @@ class ChatViewModel: ObservableObject {
         isTyping = false
 
         // Add AI message
-        let aiMessage = ChatMessage(content: response, isUser: false)
+        let aiMessage = ChatMessage(text: response, isUser: false)
         messages.append(aiMessage)
     }
 
