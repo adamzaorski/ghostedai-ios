@@ -95,9 +95,15 @@ struct DashboardView: View {
         }
         .onAppear {
             hasAppeared = true
+
+            // Refresh data when returning to dashboard
+            Task {
+                print("🔄 [Dashboard] View appeared - refreshing data...")
+                await viewModel.loadUserData()
+            }
         }
         .task {
-            print("📊 Dashboard loading...")
+            print("📊 Dashboard initial loading...")
             await viewModel.loadUserData()
 
             print("✨ Dashboard UI refinements applied")
