@@ -1,4 +1,5 @@
 import SwiftUI
+import Auth
 
 struct DashboardView: View {
     @StateObject private var viewModel = DashboardViewModel()
@@ -759,20 +760,115 @@ struct DashboardView: View {
     }
 
     private func markDate(_ date: Date, as type: HeatmapCellData) {
-        print("📅 Marking date: \(formatDate(date)) as \(type)")
-        // TODO: Update Supabase and recalculate metrics
-        showToast("Updated ✓")
-        withAnimation(.easeOut(duration: 0.2)) {
-            showEditDateModal = false
+        print("━━━━━━━━━━━━━━━━━━━━━━━━━━")
+        print("📅 [markDate] Marking date: \(formatDate(date)) as \(type)")
+        print("━━━━━━━━━━━━━━━━━━━━━━━━━━")
+
+        Task {
+            do {
+                // Determine check-in type from HeatmapCellData
+                let checkInType: String
+                switch type {
+                case .logged:
+                    checkInType = "success"
+                    print("   Type: No Contact (success)")
+                case .missed:
+                    checkInType = "slip"
+                    print("   Type: Slip (missed)")
+                case .future:
+                    print("❌ [markDate] Cannot mark future dates")
+                    await MainActor.run {
+                        showToast("Cannot edit future dates")
+                    }
+                    return
+                }
+
+                // Get current user
+                guard let user = try await SupabaseService.shared.getCurrentUser() else {
+                    print("❌ [markDate] No authenticated user found")
+                    await MainActor.run {
+                        showToast("Error: Not authenticated")
+                    }
+                    return
+                }
+
+                print("   Saving check-in to database (upsert)...")
+
+                // Upsert to Supabase - this will replace any existing check-in for this date
+                try await SupabaseService.shared.upsertCheckIn(
+                    userId: user.id,
+                    date: date,
+                    type: checkInType
+                )
+
+                print("   ✅ Check-in saved!")
+                print("   Reloading dashboard data...")
+
+                // Reload data to recalculate metrics
+                await viewModel.loadUserData()
+
+                await MainActor.run {
+                    print("   ✅ Metrics updated")
+                    showToast("Updated ✓")
+                    withAnimation(.easeOut(duration: 0.2)) {
+                        showEditDateModal = false
+                    }
+                }
+
+                print("━━━━━━━━━━━━━━━━━━━━━━━━━━")
+
+            } catch {
+                print("❌ [markDate] Error: \(error.localizedDescription)")
+                await MainActor.run {
+                    showToast("Error: \(error.localizedDescription)")
+                }
+            }
         }
-        print("🔄 Metrics recalculated")
     }
 
     private func clearDate(_ date: Date) {
-        print("🗑️ Clearing entry for: \(formatDate(date))")
-        showToast("Entry cleared")
-        withAnimation(.easeOut(duration: 0.2)) {
-            showEditDateModal = false
+        print("━━━━━━━━━━━━━━━━━━━━━━━━━━")
+        print("🗑️ [clearDate] Clearing entry for: \(formatDate(date))")
+        print("━━━━━━━━━━━━━━━━━━━━━━━━━━")
+
+        Task {
+            do {
+                // Get current user
+                guard let user = try await SupabaseService.shared.getCurrentUser() else {
+                    print("❌ [clearDate] No authenticated user found")
+                    await MainActor.run {
+                        showToast("Error: Not authenticated")
+                    }
+                    return
+                }
+
+                print("   Deleting check-in from database...")
+
+                // Delete check-in for this specific date
+                try await SupabaseService.shared.deleteCheckIn(userId: user.id, date: date)
+
+                print("   ✅ Check-in deleted!")
+                print("   Reloading dashboard data...")
+
+                // Reload data to recalculate metrics
+                await viewModel.loadUserData()
+
+                await MainActor.run {
+                    print("   ✅ Metrics updated")
+                    showToast("Entry cleared")
+                    withAnimation(.easeOut(duration: 0.2)) {
+                        showEditDateModal = false
+                    }
+                }
+
+                print("━━━━━━━━━━━━━━━━━━━━━━━━━━")
+
+            } catch {
+                print("❌ [clearDate] Error: \(error.localizedDescription)")
+                await MainActor.run {
+                    showToast("Error: \(error.localizedDescription)")
+                }
+            }
         }
     }
 

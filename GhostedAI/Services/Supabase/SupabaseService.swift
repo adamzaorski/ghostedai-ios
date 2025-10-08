@@ -440,6 +440,128 @@ final class SupabaseService {
         }
     }
 
+    /// Update or insert (upsert) a check-in for a specific date
+    /// - Parameters:
+    ///   - userId: User's unique ID
+    ///   - date: Date of the check-in
+    ///   - type: Type of check-in ("success" or "slip")
+    ///   - mood: Optional mood description
+    ///   - journal: Optional journal entry
+    /// - Throws: SupabaseError if operation fails
+    func upsertCheckIn(
+        userId: UUID,
+        date: Date,
+        type: String,
+        mood: String? = nil,
+        journal: String? = nil
+    ) async throws {
+        print("🔄 [SupabaseService] Upserting check-in...")
+        print("   User ID: \(userId)")
+        print("   Type: \(type)")
+
+        guard type == "success" || type == "slip" else {
+            throw SupabaseError.invalidData("Check-in type must be 'success' or 'slip'")
+        }
+
+        // Normalize date to YYYY-MM-DD format
+        let calendar = Calendar.current
+        let normalizedDate = calendar.startOfDay(for: date)
+        let dateFormatter = DateFormatter()
+        dateFormatter.dateFormat = "yyyy-MM-dd"
+        dateFormatter.calendar = calendar
+        dateFormatter.timeZone = TimeZone.current
+        let dateString = dateFormatter.string(from: normalizedDate)
+
+        print("   Date (local): \(dateString)")
+
+        // First, try to delete any existing check-in for this date
+        do {
+            let _ = try await client
+                .from("check_ins")
+                .delete()
+                .eq("user_id", value: userId.uuidString)
+                .eq("date", value: dateString)
+                .execute()
+            print("   Deleted existing check-in (if any)")
+        } catch {
+            print("   No existing check-in to delete (or delete failed)")
+        }
+
+        // Now insert the new check-in
+        struct CheckInInsert: Encodable {
+            let userId: String
+            let date: String
+            let type: String
+            let mood: String?
+            let journal: String?
+            let createdAt: String
+
+            enum CodingKeys: String, CodingKey {
+                case userId = "user_id"
+                case date
+                case type
+                case mood
+                case journal
+                case createdAt = "created_at"
+            }
+        }
+
+        let checkIn = CheckInInsert(
+            userId: userId.uuidString,
+            date: dateString,
+            type: type,
+            mood: mood,
+            journal: journal,
+            createdAt: ISO8601DateFormatter().string(from: Date())
+        )
+
+        do {
+            let response = try await client
+                .from("check_ins")
+                .insert(checkIn)
+                .execute()
+
+            print("✅ [SupabaseService] Check-in upserted successfully!")
+            print("   Response status: \(response.response.statusCode ?? 0)")
+        } catch {
+            print("❌ [SupabaseService] Failed to upsert check-in: \(error.localizedDescription)")
+            throw SupabaseError.databaseError("Failed to upsert check-in: \(error.localizedDescription)")
+        }
+    }
+
+    /// Delete a specific check-in for a user on a specific date
+    /// - Parameters:
+    ///   - userId: User's unique ID
+    ///   - date: Date of the check-in to delete
+    /// - Throws: SupabaseError if deletion fails
+    func deleteCheckIn(userId: UUID, date: Date) async throws {
+        // Normalize date to YYYY-MM-DD format
+        let calendar = Calendar.current
+        let normalizedDate = calendar.startOfDay(for: date)
+        let dateFormatter = DateFormatter()
+        dateFormatter.dateFormat = "yyyy-MM-dd"
+        dateFormatter.calendar = calendar
+        dateFormatter.timeZone = TimeZone.current
+        let dateString = dateFormatter.string(from: normalizedDate)
+
+        print("🗑️ [SupabaseService] Deleting check-in for user: \(userId) on date: \(dateString)")
+
+        do {
+            let response = try await client
+                .from("check_ins")
+                .delete()
+                .eq("user_id", value: userId.uuidString)
+                .eq("date", value: dateString)
+                .execute()
+
+            print("✅ [SupabaseService] Check-in deleted successfully!")
+            print("   Response status: \(response.response.statusCode ?? 0)")
+        } catch {
+            print("❌ [SupabaseService] Failed to delete check-in: \(error.localizedDescription)")
+            throw SupabaseError.databaseError("Failed to delete check-in: \(error.localizedDescription)")
+        }
+    }
+
     /// Delete all check-ins for a user (for testing/reset purposes)
     /// - Parameter userId: User's unique ID
     /// - Throws: SupabaseError if deletion fails
