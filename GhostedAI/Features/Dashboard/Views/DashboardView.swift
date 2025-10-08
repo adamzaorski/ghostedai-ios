@@ -13,6 +13,7 @@ struct DashboardView: View {
     @State private var hasAppeared = false
     @State private var isPressed = false
     @State private var isPulsing = false
+    @State private var timer: Timer?
 
     var body: some View {
         ZStack {
@@ -102,6 +103,14 @@ struct DashboardView: View {
                 print("🔄 [Dashboard] View appeared - refreshing data...")
                 await viewModel.loadUserData()
             }
+
+            // Start countdown timer
+            startCountdownTimer()
+        }
+        .onDisappear {
+            // Stop timer when view disappears
+            timer?.invalidate()
+            timer = nil
         }
         .task {
             print("📊 Dashboard initial loading...")
@@ -478,7 +487,7 @@ struct DashboardView: View {
                     )
 
                 // Text
-                Text(viewModel.hasLoggedToday ? "Great work, see you tomorrow!" : "Check in today")
+                Text(viewModel.hasLoggedToday ? "Check-in resets in \(timeUntilNextCheckIn)" : "Check in today")
                     .font(.system(size: 18, weight: viewModel.hasLoggedToday ? .regular : .semibold))
                     .foregroundColor(.white)
             }
@@ -893,6 +902,40 @@ struct DashboardView: View {
                 showSuccessToast = false
             }
         }
+    }
+
+    private func startCountdownTimer() {
+        // Update immediately
+        updateTimeUntilMidnight()
+
+        // Invalidate existing timer if any
+        timer?.invalidate()
+
+        // Create a new timer that fires every second
+        timer = Timer.scheduledTimer(withTimeInterval: 1.0, repeats: true) { _ in
+            updateTimeUntilMidnight()
+        }
+    }
+
+    private func updateTimeUntilMidnight() {
+        let now = Date()
+        let calendar = Calendar.current
+
+        // Get tomorrow at midnight
+        guard let tomorrow = calendar.date(byAdding: .day, value: 1, to: calendar.startOfDay(for: now)) else {
+            timeUntilNextCheckIn = "00:00:00"
+            return
+        }
+
+        // Calculate time difference
+        let components = calendar.dateComponents([.hour, .minute, .second], from: now, to: tomorrow)
+
+        let hours = components.hour ?? 0
+        let minutes = components.minute ?? 0
+        let seconds = components.second ?? 0
+
+        // Format as HH:MM:SS
+        timeUntilNextCheckIn = String(format: "%02d:%02d:%02d", hours, minutes, seconds)
     }
 
     private func dayLabel(for row: Int) -> String {
