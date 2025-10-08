@@ -455,9 +455,14 @@ struct DashboardView: View {
             }
         }) {
             ZStack {
-                // Base layer (dark background)
+                // Base layer (dark background with strong blur)
                 RoundedRectangle(cornerRadius: 16)
-                    .fill(Color(hex: 0x1C1C1E).opacity(0.8))
+                    .fill(Color(hex: 0x1C1C1E).opacity(0.95))
+                    .background(
+                        RoundedRectangle(cornerRadius: 16)
+                            .fill(.ultraThinMaterial)
+                            .blur(radius: 20)
+                    )
 
                 // Glass overlay (subtle shine)
                 RoundedRectangle(cornerRadius: 16)
@@ -478,6 +483,11 @@ struct DashboardView: View {
                     .foregroundColor(.white)
             }
             .frame(height: 56)
+            .background(
+                RoundedRectangle(cornerRadius: 16)
+                    .fill(.ultraThinMaterial)
+                    .blur(radius: 30)
+            )
             .overlay(
                 RoundedRectangle(cornerRadius: 16)
                     .stroke(Color.white.opacity(viewModel.hasLoggedToday ? 0.08 : 0.15), lineWidth: 1)
