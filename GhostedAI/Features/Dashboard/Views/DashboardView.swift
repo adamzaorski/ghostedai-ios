@@ -107,7 +107,7 @@ struct DashboardView: View {
             print("Next milestone: \(Int(nextMilestone)) days")
             print("Progress: \(Int(progressToNextMilestone * 100))%")
 
-            let achievedCount = allMilestones.filter { viewModel.totalDaysNoContact >= $0.days }.count
+            let achievedCount = viewModel.milestones.filter { viewModel.isMilestoneAchieved($0) }.count
             print("🏆 Milestones: \(achievedCount) unlocked")
         }
     }
@@ -373,7 +373,7 @@ struct DashboardView: View {
 
             // Show 3 milestones horizontally
             HStack(spacing: 16) {
-                ForEach(Array(threeMilestones.prefix(3)), id: \.days) { milestone in
+                ForEach(viewModel.getPreviewMilestones()) { milestone in
                     progressRingMilestone(milestone: milestone)
                 }
             }
@@ -381,15 +381,7 @@ struct DashboardView: View {
     }
 
     private func progressRingMilestone(milestone: Milestone) -> some View {
-        let current = Double(viewModel.totalDaysNoContact)
-        let currentStreak = Double(viewModel.currentStreak)
-        let target = Double(milestone.days)
-
-        // Use streak progress for streak milestones, total days for others
-        let relevantValue = milestone.isStreak ? currentStreak : current
-        let progress = min(relevantValue / target, 1.0)
-        let isCompleted = relevantValue >= target
-        let isLocked = relevantValue == 0
+        let isAchieved = viewModel.isMilestoneAchieved(milestone)
 
         return VStack(spacing: 12) {
             // Progress ring (100x100pt)
@@ -399,98 +391,45 @@ struct DashboardView: View {
                     .stroke(Color(hex: 0x2C2C2E), lineWidth: 8)
                     .frame(width: 100, height: 100)
 
-                // Progress ring (orange, partial or full)
-                Circle()
-                    .trim(from: 0, to: progress)
-                    .stroke(
-                        LinearGradient(
-                            colors: [Color(hex: 0xFF6B35), Color(hex: 0xFF8E53)],
-                            startPoint: .top,
-                            endPoint: .bottom
-                        ),
-                        style: StrokeStyle(lineWidth: 8, lineCap: .round)
-                    )
-                    .frame(width: 100, height: 100)
-                    .rotationEffect(.degrees(-90))
-                    .animation(.easeOut(duration: 1.5), value: progress)
+                // Progress ring (orange, only show if achieved)
+                if isAchieved {
+                    Circle()
+                        .trim(from: 0, to: 1.0)
+                        .stroke(
+                            LinearGradient(
+                                colors: [Color(hex: 0xFF6B35), Color(hex: 0xFF8E53)],
+                                startPoint: .top,
+                                endPoint: .bottom
+                            ),
+                            style: StrokeStyle(lineWidth: 8, lineCap: .round)
+                        )
+                        .frame(width: 100, height: 100)
+                        .rotationEffect(.degrees(-90))
+                        .animation(.easeOut(duration: 1.5), value: isAchieved)
+                }
 
-                // Icon/emoji in center
-                Text(milestoneEmoji(for: milestone, completed: isCompleted))
-                    .font(.system(size: 40))
-                    .opacity(isLocked ? 0.4 : 1.0)
+                // Icon in center (48pt)
+                Text(milestone.icon(isAchieved: isAchieved))
+                    .font(.system(size: 48))
+                    .opacity(milestone.iconOpacity(isAchieved: isAchieved))
             }
 
-            // Label below ring (differentiate types)
-            Text(milestone.isStreak ? "\(milestone.days) day streak" : "\(milestone.days) days")
+            // Label below ring
+            Text(milestone.label)
                 .font(.system(size: 16, weight: .medium))
-                .foregroundColor(isCompleted ? .white : Color(hex: 0x8E8E93))
+                .foregroundColor(isAchieved ? .white : Color(hex: 0x8E8E93))
                 .multilineTextAlignment(.center)
 
-            // Status below label
-            if !milestoneStatus(for: milestone, progress: progress).isEmpty {
-                Text(milestoneStatus(for: milestone, progress: progress))
+            // Status text (only if achieved)
+            if let statusText = milestone.statusText(isAchieved: isAchieved) {
+                Text(statusText)
                     .font(.system(size: 14, weight: .regular))
-                    .foregroundColor(statusColor(for: milestone, completed: isCompleted))
+                    .foregroundColor(Color(hex: 0x8E8E93))
             }
         }
         .frame(maxWidth: .infinity)
     }
 
-    private func milestoneEmoji(for milestone: Milestone, completed: Bool) -> String {
-        if completed {
-            return "🎉"
-        } else if milestone.days == 7 {
-            return "🏆"
-        } else if milestone.days == 30 {
-            return "⭐"
-        } else {
-            return "🎯"
-        }
-    }
-
-    private func milestoneStatus(for milestone: Milestone, progress: Double) -> String {
-        let current = viewModel.totalDaysNoContact
-        let target = milestone.days
-
-        if current >= target {
-            return "Completed"
-        } else if current > 0 {
-            return "In Progress"
-        } else {
-            return ""
-        }
-    }
-
-    private func statusColor(for milestone: Milestone, completed: Bool) -> Color {
-        let current = viewModel.totalDaysNoContact
-
-        if completed {
-            return Color(hex: 0x8E8E93)
-        } else if current > 0 {
-            return Color(hex: 0xFF6B35)
-        } else {
-            return Color(hex: 0x8E8E93)
-        }
-    }
-
-    private var threeMilestones: [Milestone] {
-        let all = allMilestones
-        let achieved = all.filter { milestone in
-            let relevantValue = milestone.isStreak ? viewModel.currentStreak : viewModel.totalDaysNoContact
-            return relevantValue >= milestone.days
-        }
-        let upcoming = all.filter { milestone in
-            let relevantValue = milestone.isStreak ? viewModel.currentStreak : viewModel.totalDaysNoContact
-            return relevantValue < milestone.days
-        }
-
-        if achieved.count >= 3 {
-            return Array(achieved.suffix(3))
-        } else {
-            let neededUpcoming = 3 - achieved.count
-            return achieved + Array(upcoming.prefix(neededUpcoming))
-        }
-    }
 
     // MARK: - Check-In Button (Glass Effect with Pulse)
 
@@ -738,7 +677,7 @@ struct DashboardView: View {
                         GridItem(.flexible()),
                         GridItem(.flexible())
                     ], spacing: 20) {
-                        ForEach(allMilestones, id: \.days) { milestone in
+                        ForEach(viewModel.milestones) { milestone in
                             progressRingMilestone(milestone: milestone)
                         }
                     }
@@ -878,29 +817,6 @@ struct DashboardView: View {
         }
     }
 
-    private var previewMilestones: [Milestone] {
-        let all = allMilestones
-        let achieved = all.filter { viewModel.totalDaysNoContact >= $0.days }
-        let upcoming = all.filter { viewModel.totalDaysNoContact < $0.days }
-
-        if achieved.count >= 3 {
-            return Array(achieved.suffix(3))
-        } else {
-            let neededUpcoming = 3 - achieved.count
-            return achieved + Array(upcoming.prefix(neededUpcoming))
-        }
-    }
-
-    private var allMilestones: [Milestone] {
-        let totalDaysMilestones = [3, 5, 10, 15, 25, 50, 75, 100, 150, 200, 250, 300, 400, 500, 600, 750, 1000, 1500, 2000]
-        let streakMilestones = [7, 14, 21, 28]
-
-        var milestones: [Milestone] = []
-        milestones.append(contentsOf: totalDaysMilestones.map { Milestone(days: $0, isStreak: false) })
-        milestones.append(contentsOf: streakMilestones.map { Milestone(days: $0, isStreak: true) })
-
-        return milestones.sorted { $0.days < $1.days }
-    }
 }
 
 #Preview {

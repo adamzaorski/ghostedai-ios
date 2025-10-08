@@ -19,14 +19,7 @@ class DashboardViewModel: ObservableObject {
     @Published var hasLoggedToday: Bool = false
     @Published var heatmapData: [HeatmapCellData] = []
     @Published var monthLabels: [String] = []
-    @Published var milestones: [Milestone] = [
-        Milestone(days: 7),
-        Milestone(days: 14),
-        Milestone(days: 30),
-        Milestone(days: 60),
-        Milestone(days: 90),
-        Milestone(days: 180)
-    ]
+    @Published var milestones: [Milestone] = []
     @Published var isLoading: Bool = true
     @Published var errorMessage: String?
 
@@ -35,6 +28,7 @@ class DashboardViewModel: ObservableObject {
     init() {
         // Start with empty state - data will be loaded when view appears
         print("🎬 [DashboardViewModel] Initialized with empty state")
+        generateMilestones()
     }
 
     // MARK: - Data Loading
@@ -424,5 +418,68 @@ class DashboardViewModel: ObservableObject {
     func refresh() async {
         print("🔄 [Dashboard] Refreshing data...")
         await loadUserData()
+    }
+
+    // MARK: - Milestones
+
+    /// Generate comprehensive milestone list with total days and streak milestones
+    private func generateMilestones() {
+        print("🎯 [Dashboard] Generating milestones...")
+
+        var allMilestones: [Milestone] = []
+
+        // Total days milestones (comprehensive list)
+        let totalDayValues = [3, 5, 7, 10, 14, 15, 21, 25, 30, 50, 60, 75, 90, 100, 150, 180, 200, 250, 300, 365, 400, 500, 600, 750, 1000, 1500, 2000]
+
+        for value in totalDayValues {
+            allMilestones.append(Milestone(value: value, type: .totalDays))
+        }
+
+        // Streak milestones
+        let streakValues = [7, 14, 21, 28]
+
+        for value in streakValues {
+            allMilestones.append(Milestone(value: value, type: .streak))
+        }
+
+        // Sort by value (ascending)
+        milestones = allMilestones.sorted { $0.value < $1.value }
+
+        print("✅ [Dashboard] Generated \(milestones.count) milestones")
+        print("   Total days milestones: \(totalDayValues.count)")
+        print("   Streak milestones: \(streakValues.count)")
+    }
+
+    /// Get last 3 milestones to display on dashboard
+    func getPreviewMilestones() -> [Milestone] {
+        let achievedTotal = milestones.filter { $0.type == .totalDays && totalDaysNoContact >= $0.value }
+        let achievedStreak = milestones.filter { $0.type == .streak && currentStreak >= $0.value }
+        let allAchieved = achievedTotal + achievedStreak
+
+        if allAchieved.count >= 3 {
+            // Show last 3 achieved (most recent accomplishments)
+            return Array(allAchieved.sorted { $0.value < $1.value }.suffix(3))
+        } else if allAchieved.count > 0 {
+            // Show achieved + next upcoming
+            let remaining = 3 - allAchieved.count
+            let notAchievedTotal = milestones.filter { $0.type == .totalDays && totalDaysNoContact < $0.value }
+            let notAchievedStreak = milestones.filter { $0.type == .streak && currentStreak < $0.value }
+            let notAchieved = (notAchievedTotal + notAchievedStreak).sorted { $0.value < $1.value }
+            let upcoming = Array(notAchieved.prefix(remaining))
+            return (allAchieved + upcoming).sorted { $0.value < $1.value }
+        } else {
+            // Show first 3 upcoming milestones
+            return Array(milestones.prefix(3))
+        }
+    }
+
+    /// Check if milestone is achieved based on its type
+    func isMilestoneAchieved(_ milestone: Milestone) -> Bool {
+        switch milestone.type {
+        case .totalDays:
+            return totalDaysNoContact >= milestone.value
+        case .streak:
+            return currentStreak >= milestone.value
+        }
     }
 }
