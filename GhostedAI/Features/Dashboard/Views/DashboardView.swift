@@ -435,10 +435,17 @@ struct DashboardView: View {
 
     private var checkInButton: some View {
         Button(action: {
+            print("🔘 [DashboardView] Check-in button tapped")
+            print("   hasLoggedToday: \(viewModel.hasLoggedToday)")
+
             if !viewModel.hasLoggedToday {
+                print("   ✅ User hasn't logged today - showing modal")
                 let impactFeedback = UIImpactFeedbackGenerator(style: .light)
                 impactFeedback.impactOccurred()
                 showCheckInModal = true
+                print("   showCheckInModal set to: \(showCheckInModal)")
+            } else {
+                print("   ⚠️ User already logged today - button disabled")
             }
         }) {
             ZStack {
@@ -512,6 +519,7 @@ struct DashboardView: View {
                     // Buttons
                     VStack(spacing: 16) {
                         Button(action: {
+                            print("💪 [Modal] YES button tapped - user confirmed success")
                             handleCheckInSuccess()
                         }) {
                             Text("Yes! 💪")
@@ -531,6 +539,7 @@ struct DashboardView: View {
                         }
 
                         Button(action: {
+                            print("😔 [Modal] SLIP button tapped - user logged slip")
                             handleCheckInSlip()
                         }) {
                             Text("I slipped... 😔")
@@ -691,24 +700,44 @@ struct DashboardView: View {
     // MARK: - Helper Functions
 
     private func handleCheckInSuccess() {
-        print("✅ Check-in logged: success")
+        print("━━━━━━━━━━━━━━━━━━━━━━━━━━")
+        print("✅ [handleCheckInSuccess] Starting success flow")
+        print("━━━━━━━━━━━━━━━━━━━━━━━━━━")
+
         Task {
+            print("   Calling viewModel.logTodayNoContact()...")
             await viewModel.logTodayNoContact()
-        }
-        showToast("Great work! Let's check back tomorrow!")
-        withAnimation(.easeOut(duration: 0.2)) {
-            showCheckInModal = false
+            print("   ✅ logTodayNoContact() completed")
+
+            await MainActor.run {
+                print("   Showing success toast and closing modal")
+                showToast("Great work! Let's check back tomorrow!")
+                withAnimation(.easeOut(duration: 0.2)) {
+                    showCheckInModal = false
+                }
+                print("   ✅ Modal closed")
+            }
         }
     }
 
     private func handleCheckInSlip() {
-        print("❌ Check-in logged: slip")
+        print("━━━━━━━━━━━━━━━━━━━━━━━━━━")
+        print("😔 [handleCheckInSlip] Starting slip flow")
+        print("━━━━━━━━━━━━━━━━━━━━━━━━━━")
+
         Task {
+            print("   Calling viewModel.logTodaySlip()...")
             await viewModel.logTodaySlip()
-        }
-        showToast("No worries, shit happens. Let's focus on the next day!")
-        withAnimation(.easeOut(duration: 0.2)) {
-            showCheckInModal = false
+            print("   ✅ logTodaySlip() completed")
+
+            await MainActor.run {
+                print("   Showing slip toast and closing modal")
+                showToast("No worries, shit happens. Let's focus on the next day!")
+                withAnimation(.easeOut(duration: 0.2)) {
+                    showCheckInModal = false
+                }
+                print("   ✅ Modal closed")
+            }
         }
     }
 
