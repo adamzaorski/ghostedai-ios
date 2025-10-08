@@ -4,6 +4,7 @@ import SwiftUI
 /// Premium iOS design with precise spacing, colors, and interactions
 struct SignInOptionsView: View {
     @Environment(\.dismiss) private var dismiss
+    @EnvironmentObject var authState: AuthStateManager
     @State private var navigateToEmailSignIn = false
     @State private var showTerms = false
     @State private var showPrivacy = false

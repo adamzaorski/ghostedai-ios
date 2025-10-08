@@ -5,6 +5,7 @@ import Auth
 /// Matches our glassmorphic design system with minimal, therapeutic aesthetic
 struct EmailSignInView: View {
     @Environment(\.dismiss) private var dismiss
+    @EnvironmentObject var authState: AuthStateManager
     @StateObject private var viewModel = EmailSignInViewModel()
     @State private var showAlert = false
     @State private var showPassword = false
@@ -65,8 +66,19 @@ struct EmailSignInView: View {
             .navigationDestination(isPresented: $viewModel.shouldNavigateToOnboarding) {
                 OnboardingContainerView()
             }
-            .navigationDestination(isPresented: $viewModel.shouldNavigateToDashboard) {
-                MainTabView()
+            .onChange(of: viewModel.shouldNavigateToDashboard) { _, newValue in
+                if newValue {
+                    // User signed in successfully - update auth state
+                    // This will trigger view hierarchy swap to MainTabView at root level
+                    print("✅ [EmailSignIn] Sign in complete - updating auth state")
+                    Task {
+                        if let user = try? await SupabaseService.shared.getCurrentUser() {
+                            await MainActor.run {
+                                authState.signIn(user: user)
+                            }
+                        }
+                    }
+                }
             }
             .onChange(of: viewModel.errorMessage) { oldValue, newValue in
                 if newValue != nil {

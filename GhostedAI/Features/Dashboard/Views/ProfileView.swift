@@ -5,6 +5,7 @@ import StoreKit
 /// Comprehensive profile view with user settings and account management
 struct ProfileView: View {
     @StateObject private var viewModel = ProfileViewModel()
+    @EnvironmentObject var authState: AuthStateManager
     @State private var showEditProfile = false
     @State private var showEditField: ProfileField? = nil
     @State private var showChangePassword = false
@@ -78,7 +79,9 @@ struct ProfileView: View {
             .alert("Sign Out", isPresented: $showSignOutConfirmation) {
                 Button("Cancel", role: .cancel) {}
                 Button("Sign Out", role: .destructive) {
-                    viewModel.signOut()
+                    Task {
+                        await authState.signOut()
+                    }
                 }
             } message: {
                 Text("Are you sure you want to sign out?")

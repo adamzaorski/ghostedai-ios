@@ -4,10 +4,10 @@ import SwiftUI
 struct OnboardingContainerView: View {
     @StateObject private var viewModel = OnboardingViewModel()
     @Environment(\.dismiss) private var dismiss
+    @EnvironmentObject var authState: AuthStateManager
 
     @State private var showExitConfirmation = false
     @State private var navigateToPaywall = false
-    @State private var navigateToDashboard = false
 
     var body: some View {
         ZStack {
@@ -69,9 +69,6 @@ struct OnboardingContainerView: View {
         .navigationDestination(isPresented: $navigateToPaywall) {
             PaywallView()
         }
-        .fullScreenCover(isPresented: $navigateToDashboard) {
-            MainTabView()
-        }
         .alert("Exit Onboarding?", isPresented: $showExitConfirmation) {
             Button("Cancel", role: .cancel) {}
             Button("Exit", role: .destructive) {
@@ -87,7 +84,16 @@ struct OnboardingContainerView: View {
         }
         .onChange(of: viewModel.navigateToDashboard) { _, newValue in
             if newValue {
-                navigateToDashboard = true
+                // User completed onboarding - update auth state
+                // This will trigger view hierarchy swap to MainTabView at root level
+                print("✅ [Onboarding] Complete - updating auth state")
+                Task {
+                    if let user = try? await SupabaseService.shared.getCurrentUser() {
+                        await MainActor.run {
+                            authState.signIn(user: user)
+                        }
+                    }
+                }
             }
         }
         .task {

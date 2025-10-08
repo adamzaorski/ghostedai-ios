@@ -81,10 +81,56 @@ struct GhostedAIApp: App {
 
     var body: some Scene {
         WindowGroup {
-            // Uncomment the view you want to test:
-            ContentView()
-            // DesignSystemPreviewView()
+            RootView()
         }
         .modelContainer(sharedModelContainer)
+    }
+}
+
+// MARK: - Root View
+
+/// Root view that swaps between auth flow and main app based on authentication state
+/// This prevents users from swiping back to login screens once authenticated
+struct RootView: View {
+    @StateObject private var authState = AuthStateManager()
+
+    var body: some View {
+        Group {
+            if authState.isLoading {
+                // Show loading screen while checking auth status
+                LoadingView()
+            } else if authState.isAuthenticated {
+                // User is authenticated → Show main app (NO navigation stack)
+                MainTabView()
+                    .environmentObject(authState)
+            } else {
+                // User not authenticated → Show auth flow
+                WelcomeView()
+                    .environmentObject(authState)
+            }
+        }
+        .animation(.easeInOut(duration: 0.3), value: authState.isAuthenticated)
+    }
+}
+
+// MARK: - Loading View
+
+/// Simple loading screen shown while checking initial auth status
+struct LoadingView: View {
+    var body: some View {
+        ZStack {
+            Color.DS.primaryBlack
+                .ignoresSafeArea()
+
+            VStack(spacing: 24) {
+                ProgressView()
+                    .tint(Color(hex: 0xFF6B35))
+                    .scaleEffect(1.5)
+
+                Text("GhostedAI")
+                    .font(.system(size: 32, weight: .bold))
+                    .foregroundColor(.white)
+            }
+        }
     }
 }
