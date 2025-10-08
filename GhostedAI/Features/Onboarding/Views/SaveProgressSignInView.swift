@@ -8,6 +8,7 @@ struct SaveProgressSignInView: View {
 
     @State private var showingAlert = false
     @State private var alertMessage = ""
+    @State private var showEmailSignIn = false
 
     var body: some View {
         ZStack {
@@ -31,6 +32,27 @@ struct SaveProgressSignInView: View {
 
                 // Sign in buttons (centered vertically)
                 VStack(spacing: 16) {
+                    // Sign in with Email
+                    Button(action: handleEmailSignIn) {
+                        HStack(spacing: 12) {
+                            Image(systemName: "envelope.fill")
+                                .font(.system(size: 20, weight: .semibold))
+                                .foregroundColor(Color(hex: 0xFF6B35))
+
+                            Text("Sign in with Email")
+                                .font(.system(size: 17, weight: .semibold))
+                                .foregroundColor(.white)
+                        }
+                        .frame(maxWidth: .infinity, minHeight: 56)
+                        .background(Color(hex: 0x1C1C1E))
+                        .clipShape(RoundedRectangle(cornerRadius: 14))
+                        .overlay(
+                            RoundedRectangle(cornerRadius: 14)
+                                .stroke(Color(hex: 0xFF6B35), lineWidth: 1.5)
+                        )
+                    }
+                    .buttonStyle(ScaleButtonStyle())
+
                     // Sign in with Apple - Custom button matching our style
                     Button(action: handleAppleSignInTap) {
                         HStack(spacing: 12) {
@@ -108,6 +130,12 @@ struct SaveProgressSignInView: View {
         } message: {
             Text(alertMessage)
         }
+        .sheet(isPresented: $showEmailSignIn) {
+            EmailSignInSheet(onSuccess: {
+                showEmailSignIn = false
+                onContinue()
+            })
+        }
     }
 
     // MARK: - Progress Bar
@@ -140,6 +168,10 @@ struct SaveProgressSignInView: View {
 
     // MARK: - Actions
 
+    private func handleEmailSignIn() {
+        showEmailSignIn = true
+    }
+
     private func handleAppleSignInTap() {
         // Use the native Sign in with Apple flow
         let provider = ASAuthorizationAppleIDProvider()
@@ -166,6 +198,22 @@ struct SaveProgressSignInView: View {
         DispatchQueue.main.asyncAfter(deadline: .now() + 1.0) {
             onContinue()
         }
+    }
+}
+
+/// Wrapper for EmailSignInView to work with onboarding flow
+struct EmailSignInSheet: View {
+    @StateObject private var authState = AuthStateManager()
+    var onSuccess: () -> Void
+
+    var body: some View {
+        EmailSignInView()
+            .environmentObject(authState)
+            .onChange(of: authState.isAuthenticated) { oldValue, newValue in
+                if newValue {
+                    onSuccess()
+                }
+            }
     }
 }
 
