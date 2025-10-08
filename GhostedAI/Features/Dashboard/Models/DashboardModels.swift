@@ -2,9 +2,10 @@ import Foundation
 
 // MARK: - Heatmap Cell Data
 
-enum HeatmapCellData {
-    case logged   // Orange square
-    case missed   // Dark square
+enum HeatmapCellData: Equatable {
+    case logged   // Orange square - No contact success (#FF6B35)
+    case slip     // Dark gray square - Logged but contacted (#3A3A3C)
+    case missed   // Super light gray - Not logged at all (#2C2C2E)
     case future   // Empty with orange border
 }
 

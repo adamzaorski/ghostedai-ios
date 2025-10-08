@@ -357,22 +357,31 @@ class DashboardViewModel: ObservableObject {
         print("   Today (normalized): \(today)")
         print("   Check-ins to process: \(checkIns.count)")
 
-        // Parse all check-in dates into a set for fast lookup
-        var checkInDates: Set<Date> = []
-        for checkIn in checkIns where checkIn.type == "success" {
+        // Parse check-ins into separate dictionaries by type
+        var successDates: Set<Date> = []
+        var slipDates: Set<Date> = []
+
+        for checkIn in checkIns {
             if let date = parseCheckInDate(checkIn.date) {
                 let startOfDay = calendar.startOfDay(for: date)
-                checkInDates.insert(startOfDay)
-                print("   Added date to heatmap: \(startOfDay)")
+
+                if checkIn.type == "success" {
+                    successDates.insert(startOfDay)
+                    print("   ✅ Success check-in: \(startOfDay)")
+                } else if checkIn.type == "slip" {
+                    slipDates.insert(startOfDay)
+                    print("   😔 Slip check-in: \(startOfDay)")
+                }
 
                 // Check if it's today
                 if calendar.isDate(startOfDay, inSameDayAs: today) {
-                    print("     🎯 This is TODAY - should show in heatmap!")
+                    print("     🎯 This is TODAY! Type: \(checkIn.type)")
                 }
             }
         }
 
-        print("   Total unique dates for heatmap: \(checkInDates.count)")
+        print("   Total success dates: \(successDates.count)")
+        print("   Total slip dates: \(slipDates.count)")
 
         // Generate 91 days of heatmap data (13 weeks)
         heatmapData = (0..<91).map { index in
@@ -381,20 +390,41 @@ class DashboardViewModel: ObservableObject {
                 return .missed
             }
 
-            // Check if this date has a check-in
-            let hasCheckIn = checkInDates.contains(date)
+            // Determine cell state based on check-in type
+            let cellState: HeatmapCellData
+            if date > today {
+                // Future dates
+                cellState = .future
+            } else if successDates.contains(date) {
+                // Success check-in (no contact)
+                cellState = .logged
+            } else if slipDates.contains(date) {
+                // Slip check-in (contacted)
+                cellState = .slip
+            } else {
+                // No check-in at all
+                cellState = .missed
+            }
 
             // Log today's cell specifically
             if calendar.isDate(date, inSameDayAs: today) {
-                print("   Heatmap cell for TODAY (index \(index)): \(hasCheckIn ? "LOGGED ✅" : "MISSED ❌")")
+                print("   Heatmap cell for TODAY (index \(index)): \(cellState)")
             }
 
-            return hasCheckIn ? .logged : .missed
+            return cellState
         }
 
         let loggedCount = heatmapData.filter { $0 == .logged }.count
-        print("🗓️ [Dashboard] Heatmap generated: \(loggedCount) logged days out of 91")
-        print("   Heatmap data array count: \(heatmapData.count)")
+        let slipCount = heatmapData.filter { $0 == .slip }.count
+        let missedCount = heatmapData.filter { $0 == .missed }.count
+        let futureCount = heatmapData.filter { $0 == .future }.count
+
+        print("🗓️ [Dashboard] Heatmap generated:")
+        print("   🟠 Logged (success): \(loggedCount)")
+        print("   ⚫️ Slip: \(slipCount)")
+        print("   ⚪️ Missed: \(missedCount)")
+        print("   🔲 Future: \(futureCount)")
+        print("   Total cells: \(heatmapData.count)")
     }
 
     /// Generate month labels for heatmap (last 3 months)

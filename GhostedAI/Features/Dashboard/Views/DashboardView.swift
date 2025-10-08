@@ -650,7 +650,7 @@ struct DashboardView: View {
                         }
 
                         Button(action: {
-                            markDate(date, as: .missed)
+                            markDate(date, as: .slip)
                         }) {
                             Text("Mark as Slip")
                                 .font(.system(size: 16, weight: .semibold))
@@ -791,9 +791,16 @@ struct DashboardView: View {
                 case .logged:
                     checkInType = "success"
                     print("   Type: No Contact (success)")
-                case .missed:
+                case .slip:
                     checkInType = "slip"
-                    print("   Type: Slip (missed)")
+                    print("   Type: Slip (contacted ex)")
+                case .missed:
+                    // This shouldn't happen in markDate - missed means no check-in
+                    print("❌ [markDate] Cannot mark as 'missed' - use clear instead")
+                    await MainActor.run {
+                        showToast("Error: Invalid state")
+                    }
+                    return
                 case .future:
                     print("❌ [markDate] Cannot mark future dates")
                     await MainActor.run {
@@ -945,11 +952,13 @@ struct DashboardView: View {
     private func cellColor(for cellData: HeatmapCellData) -> Color {
         switch cellData {
         case .logged:
-            return Color(hex: 0xFF6B35)
+            return Color(hex: 0xFF6B35) // Bright orange - Success
+        case .slip:
+            return Color(hex: 0x3A3A3C) // Dark gray - Slip/contacted
         case .missed:
-            return Color(hex: 0x6B4423)
+            return Color(hex: 0x2C2C2E) // Super light gray - Not logged
         case .future:
-            return Color.clear
+            return Color.clear // Transparent with border
         }
     }
 
