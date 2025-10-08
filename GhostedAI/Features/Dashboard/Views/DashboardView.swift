@@ -954,7 +954,7 @@ struct DashboardView: View {
         case .logged:
             return Color(hex: 0xFF6B35) // Bright orange - Success
         case .slip:
-            return Color(hex: 0x3A3A3C) // Dark gray - Slip/contacted
+            return Color.black // Black - Slip/contacted
         case .missed:
             return Color(hex: 0x2C2C2E) // Super light gray - Not logged
         case .future:
